@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>兒童生長管理系統</title>
+    <!-- 載入 Tailwind CSS 用來排版和上色 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  
+  <!-- 設定 body 寬度 100% (w-full) 且高度至少填滿螢幕 (min-h-screen) -->
+  <body class="w-full min-h-screen m-0 p-0 bg-[#FFFBE6]">
+    
+    <!-- 設定 React 掛載點也必須填滿 -->
+    <div id="root" class="w-full min-h-screen"></div>
+    
+    <!-- ★★★ 關鍵！這行載入程式碼的指令絕對不能少，否則畫面會是白的 ★★★ -->
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

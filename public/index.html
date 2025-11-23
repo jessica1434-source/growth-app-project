@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>兒童生長管理系統</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bg: '#FFF9C4', // 鵝黃色背景 (主要)
+                        card: '#FFFFF0', // 象牙白卡片
+                        primary: '#FF9800', // 溫暖橘 (按鈕/重點)
+                        secondary: '#C36E1B', // 新：溫暖紅棕色 (導航/主要文字)
+                        accent: '#FFB74D', // 淺橘
+                        riskRed: '#D32F2F', // 風險紅
+                        riskYellow: '#FBC02D',
+                        riskGreen: '#388E3C',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: "Microsoft JhengHei", sans-serif; background-color: #FFF9C4; color: #C36E1B; }
+        .hidden { display: none !important; }
+        .risk-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        /* 頁籤切換樣式 */
+        .tab-btn { border-bottom: 3px solid transparent; opacity: 0.8; }
+        .tab-btn.active { border-bottom: 3px solid #FF9800; opacity: 1; font-weight: bold; }
+        /* 確保完全避開粉紅色 */
+        ::selection { background: #FFCC80; color: #C36E1B; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- 導航列 (使用新的紅棕色 secondary) -->
+    <nav class="bg-secondary text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center gap-2">
+            <i class="fa-solid fa-sun text-yellow-300 text-xl animate-pulse"></i>
+            <!-- 移除 "小太陽" -->
+            <h1 class="text-xl font-bold tracking-wide">兒童生長管理系統</h1>
+        </div>
+        <div id="navUser" class="hidden flex items-center gap-3">
+            <div class="text-right leading-tight">
+                <span id="userRoleDisplay" class="block text-xs bg-primary px-1 rounded inline-block mb-1"></span>
+                <span id="userNameDisplay" class="text-sm font-bold"></span>
+            </div>
+            <button onclick="logout()" class="bg-white text-secondary px-3 py-2 rounded hover:bg-gray-200 transition text-sm font-bold">
+                <i class="fa-solid fa-sign-out-alt"></i> 登出
+            </button>
+        </div>
+    </nav>
+
+    <!-- 主要內容區 -->
+    <main class="flex-grow p-4 md:p-6 max-w-7xl mx-auto w-full">
+        
+        <!-- 1. 登入/註冊區塊 (Auth Section) -->
+        <div id="authSection" class="max-w-md mx-auto bg-card p-0 rounded-xl shadow-xl mt-10 overflow-hidden border border-orange-200">
+            <!-- 頁籤 Header -->
+            <div class="flex bg-orange-100">
+                <button onclick="switchAuthTab('login')" id="tab-login" class="tab-btn active flex-1 py-4 text-center text-secondary transition">登入系統</button>
+                <button onclick="switchAuthTab('register')" id="tab-register" class="tab-btn flex-1 py-4 text-center text-secondary transition">註冊帳號</button>
+            </div>
+
+            <div class="p-8">
+                <!-- 登入表單 -->
+                <form id="loginForm" onsubmit="handleAuth(event, 'login')" class="space-y-6">
+                    <div class="text-center mb-6">
+                        <i class="fa-solid fa-circle-user text-6xl text-orange-200"></i>
+                        <h2 class="text-xl font-bold text-secondary mt-2">歡迎回來</h2>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-2 text-secondary"><i class="fa-solid fa-id-card"></i> 帳號</label>
+                        <input type="text" id="loginId" placeholder="請輸入您的帳號" class="w-full p-3 border border-orange-200 rounded-lg focus:outline-none focus:border-primary bg-white text-lg" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-2 text-secondary"><i class="fa-solid fa-lock"></i> 密碼</label>
+                        <input type="password" id="loginPwd" placeholder="請輸入密碼" class="w-full p-3 border border-orange-200 rounded-lg focus:outline-none focus:border-primary bg-white text-lg" required>
+                    </div>
+                    <button type="submit" class="w-full bg-primary text-white py-3 rounded-lg hover:bg-orange-600 transition font-bold shadow-md text-lg">
+                        登入
+                    </button>
+                </form>
+
+                <!-- 註冊表單 (預設隱藏) -->
+                <form id="registerForm" onsubmit="handleAuth(event, 'register')" class="space-y-4 hidden">
+                    <div class="bg-yellow-50 p-4 rounded text-sm text-secondary mb-4 border-l-4 border-primary">
+                        <p class="font-bold">新進管理師設定</p>
+                        <p>請自行設定一組好記的帳號與密碼。</p>
+                        <p class="text-xs text-gray-500 mt-1">* 系統第一位註冊者將自動成為老闆。</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-bold mb-1 text-secondary">姓名</label>
+                        <input type="text" id="regName" placeholder="您的真實姓名" class="w-full p-3 border border-orange-200 rounded focus:outline-none focus:border-primary bg-white" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-1 text-secondary">自訂帳號</label>
+                        <input type="text" id="regId" placeholder="例如: manager01" class="w-full p-3 border border-orange-200 rounded focus:outline-none focus:border-primary bg-white" required>
+                        <p class="text-xs text-gray-400 mt-1">請使用英數字組合</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-1 text-secondary">自訂密碼</label>
+                        <input type="password" id="regPwd" placeholder="至少6位數" class="w-full p-3 border border-orange-200 rounded focus:outline-none focus:border-primary bg-white" required>
+                    </div>
+                    <button type="submit" class="w-full bg-secondary text-white py-3 rounded hover:bg-brown-700 transition font-bold shadow-md">
+                        建立帳號
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 2. 老闆儀表板 (Owner) -->
+        <div id="ownerDashboard" class="hidden space-y-6 animate-fade-in">
+            <!-- 數據卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-card p-5 rounded-lg shadow border-l-4 border-secondary">
+                    <h3 class="text-gray-500 text-sm font-bold">總家庭數</h3>
+                    <p class="text-4xl font-bold text-secondary mt-2" id="ownerTotalFamilies">0</p>
+                </div>
+                <div class="bg-card p-5 rounded-lg shadow border-l-4 border-riskRed">
+                    <h3 class="text-gray-500 text-sm font-bold">高風險家庭</h3>
+                    <p class="text-4xl font-bold text-riskRed mt-2" id="ownerRiskCount">0</p>
+                </div>
+                <div class="bg-card p-5 rounded-lg shadow border-l-4 border-riskGreen">
+                    <h3 class="text-gray-500 text-sm font-bold">平均長高</h3>
+                    <p class="text-4xl font-bold text-riskGreen mt-2" id="ownerAvgGrowth">0 <span class="text-sm text-gray-400">cm</span></p>
+                </div>
+                 <div class="bg-card p-5 rounded-lg shadow border-l-4 border-primary">
+                    <h3 class="text-gray-500 text-sm font-bold">當月壽星</h3>
+                    <p class="text-4xl font-bold text-primary mt-2" id="ownerBirthdayCount">0</p>
+                </div>
+            </div>
+
+            <!-- 人員管理區 -->
+            <div class="bg-card p-6 rounded-lg shadow">
+                <h3 class="text-xl font-bold mb-4 text-secondary flex items-center gap-2">
+                    <i class="fa-solid fa-users-gear"></i> 人員權限管理
+                </h3>
+                <div id="staffList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- JS 動態生成 -->
+                </div>
+            </div>
+
+            <!-- 全機構總覽 -->
+            <div class="bg-card p-6 rounded-lg shadow">
+                <h3 class="text-xl font-bold mb-4 text-secondary flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line"></i> 全機構家庭成長趨勢
+                </h3>
+                <!-- 篩選器 -->
+                <div class="flex gap-2 mb-4 overflow-x-auto pb-2">
+                    <button onclick="filterOwnerTable('all')" class="bg-secondary text-white px-3 py-1 rounded text-sm whitespace-nowrap hover:bg-opacity-90 transition">全部</button>
+                    <button onclick="filterOwnerTable('risk')" class="bg-riskRed text-white px-3 py-1 rounded text-sm whitespace-nowrap hover:bg-opacity-90 transition">高風險</button>
+                    <!-- 國籍按鈕會動態增加在這裡 -->
+                    <div id="nationFilters" class="flex gap-2"></div>
+                </div>
+
+                <div class="overflow-x-auto rounded-lg border border-orange-100">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-orange-100 text-secondary text-sm">
+                                <th class="p-3">國籍</th>
+                                <th class="p-3">孩童/生日</th>
+                                <th class="p-3">生長數據 (目前/長高)</th>
+                                <th class="p-3">負責人員</th>
+                                <th class="p-3 text-center">風險</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ownerFamilyTable" class="text-sm bg-white divide-y divide-orange-50">
+                            <!-- JS 動態生成 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 班主任儀表板 (Director) -->
+        <div id="directorDashboard" class="hidden space-y-6">
+             <div class="bg-yellow-100 border-l-4 border-primary text-yellow-800 p-4 rounded shadow-sm" role="alert">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-user-tie text-xl"></i>
+                    <div>
+                        <p class="font-bold">班主任督導模式</p>
+                        <p class="text-sm">僅供檢視旗下管理師績效與家庭狀況，不可編輯。</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- 左側：管理師績效 -->
+                <div class="bg-card p-6 rounded-lg shadow h-fit">
+                    <h3 class="text-xl font-bold mb-4 text-secondary border-b pb-2 border-orange-100">旗下管理師表現</h3>
+                    <div id="directorTeamList" class="space-y-3">
+                        <!-- JS -->
+                    </div>
+                </div>
+
+                <!-- 右側：重點關注家庭 -->
+                <div class="bg-card p-6 rounded-lg shadow">
+                    <h3 class="text-xl font-bold mb-4 text-secondary border-b pb-2 border-orange-100">需關注家庭 (紅/黃燈)</h3>
+                    <div id="directorRiskList" class="space-y-3 max-h-[500px] overflow-y-auto">
+                        <!-- JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. 管理師儀表板 (Manager) -->
+        <div id="managerDashboard" class="hidden space-y-6">
+            <div class="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm">
+                <div>
+                    <h2 class="text-2xl font-bold text-secondary">我的家庭管理</h2>
+                    <p class="text-gray-500 text-sm">管理與紀錄孩童生長曲線</p>
+                </div>
+                <button onclick="openFamilyModal()" class="bg-primary text-white px-5 py-2 rounded-full shadow hover:bg-orange-600 font-bold transition transform hover:scale-105 flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> 新增家庭
+                </button>
+            </div>
+
+            <div id="managerFamilyList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- 家庭卡片區 JS -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 彈出視窗：新增/編輯家庭 (Modal) -->
+    <div id="familyModal" class="hidden fixed inset-0 bg-secondary bg-opacity-70 flex justify-center items-center z-50 p-4 backdrop-blur-sm">
+        <div class="bg-card rounded-xl w-full max-w-3xl shadow-2xl relative max-h-[90vh] overflow-y-auto border-t-8 border-primary">
+            <!-- 關閉按鈕 -->
+            <button onclick="closeFamilyModal()" class="absolute top-4 right-4 text-gray-400 hover:text-riskRed w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-50 transition">
+                <i class="fa-solid fa-times text-xl"></i>
+            </button>
+            
+            <div class="p-6 md:p-8">
+                <h3 id="modalTitle" class="text-2xl font-bold mb-6 text-secondary border-b pb-2">新增家庭資料</h3>
+                
+                <form id="familyForm" onsubmit="saveFamily(event)" class="space-y-6">
+                    <input type="hidden" id="familyId">
+                    
+                    <!-- 家長基本資料 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-4 rounded border border-orange-100">
+                        <div>
+                            <label class="block text-xs font-bold text-primary uppercase mb-1">家長姓名</label>
+                            <input type="text" id="parentName" class="w-full border-b-2 border-orange-200 focus:border-primary outline-none py-2 bg-transparent transition" placeholder="輸入姓名" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-primary uppercase mb-1">國籍</label>
+                            <input type="text" id="nationality" class="w-full border-b-2 border-orange-200 focus:border-primary outline-none py-2 bg-transparent transition" placeholder="例如: 越南, 印尼, 台灣" required>
+                        </div>
+                    </div>
+
+                    <!-- 風險與狀態 -->
+                    <div class="bg-white p-4 rounded border border-orange-100">
+                        <label class="block text-xs font-bold text-primary uppercase mb-3">管理風險燈號</label>
+                        <div class="flex gap-4">
+                            <label class="cursor-pointer border p-2 rounded hover:bg-green-50 w-full text-center has-[:checked]:border-riskGreen has-[:checked]:bg-green-100 transition">
+                                <input type="radio" name="risk" value="green" class="hidden" checked> 
+                                <span class="text-riskGreen font-bold"><i class="fa-solid fa-circle"></i> 穩定</span>
+                            </label>
+                            <label class="cursor-pointer border p-2 rounded hover:bg-yellow-50 w-full text-center has-[:checked]:border-riskYellow has-[:checked]:bg-yellow-100 transition">
+                                <input type="radio" name="risk" value="yellow" class="hidden"> 
+                                <span class="text-riskYellow font-bold"><i class="fa-solid fa-circle"></i> 觀察</span>
+                            </label>
+                            <label class="cursor-pointer border p-2 rounded hover:bg-red-50 w-full text-center has-[:checked]:border-riskRed has-[:checked]:bg-red-100 transition">
+                                <input type="radio" name="risk" value="red" class="hidden"> 
+                                <span class="text-riskRed font-bold"><i class="fa-solid fa-circle"></i> 高風險</span>
+                            </label>
+                        </div>
+
+                        <div class="mt-4">
+                            <label class="block text-xs font-bold text-primary uppercase mb-1">管理狀況回報</label>
+                            <textarea id="statusReport" class="w-full border border-orange-200 rounded p-2 focus:border-primary h-20 bg-gray-50 focus:bg-white transition" placeholder="請填寫本月訪視或電訪狀況..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- 孩童資料 (支援多位) -->
+                    <div class="bg-white p-4 rounded border border-orange-100 relative">
+                        <h4 class="font-bold text-secondary mb-3 flex items-center gap-2"><i class="fa-solid fa-baby"></i> 孩童資料</h4>
+                        
+                        <!-- 簡化版：目前先做一位孩童，若需多位可擴充 -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="md:col-span-3">
+                                <label class="block text-xs text-gray-500">孩童姓名</label>
+                                <input type="text" id="kidName" class="w-full border p-2 rounded bg-gray-50" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500">生日</label>
+                                <input type="date" id="kidDob" class="w-full border p-2 rounded bg-gray-50" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500">骨齡 (歲)</label>
+                                <input type="number" step="0.1" id="kidBoneAge" class="w-full border p-2 rounded bg-gray-50" placeholder="未測免填">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs text-gray-500">初始身高</label>
+                                    <input type="number" step="0.1" id="initHeight" class="w-full border p-2 rounded bg-gray-50" required>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500">初始體重</label>
+                                    <input type="number" step="0.1" id="initWeight" class="w-full border p-2 rounded bg-gray-50" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 本月紀錄輸入 -->
+                    <div class="bg-primary bg-opacity-10 p-4 rounded border border-primary border-dashed">
+                        <h5 class="text-sm font-bold text-primary mb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-pen-to-square"></i> 新增測量紀錄 (選填)
+                        </h5>
+                        <div class="flex flex-wrap gap-2 items-end">
+                            <div class="flex-1 min-w-[120px]">
+                                <label class="text-xs text-gray-500">月份</label>
+                                <input type="month" id="logMonth" class="w-full border p-2 rounded text-sm">
+                            </div>
+                            <div class="flex-1 min-w-[80px]">
+                                <label class="text-xs text-gray-500">身高 (cm)</label>
+                                <input type="number" id="logHeight" step="0.1" class="w-full border p-2 rounded text-sm">
+                            </div>
+                            <div class="flex-1 min-w-[80px]">
+                                <label class="text-xs text-gray-500">體重 (kg)</label>
+                                <input type="number" id="logWeight" step="0.1" class="w-full border p-2 rounded text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-secondary text-white py-3 rounded-lg hover:bg-brown-600 transition font-bold text-lg shadow-lg">
+                        <i class="fa-solid fa-save"></i> 儲存資料
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK (Modular Style via Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // ==========================================
+        // 1. Firebase 設定 (請在此處填入您的 Config)
+        // ==========================================
+        const firebaseConfig = {
+            // 請替換成您的專案設定
+            apiKey: "AIzaSyCKTt1jsKazPFJUTXIyJKqs2NGIyRJfzRo",
+            authDomain: "growth-app-final.firebaseapp.com",
+            projectId: "growth-app-final",
+            storageBucket: "growth-app-final.firebasestorage.app",
+            messagingSenderId: "853085915536",
+            appId: "1:853085915536:web:8853f3f25235aacaf74b15"
+        };
+
+        // 初始化
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        let currentUser = null;
+        let userData = null;
+        const FAKE_DOMAIN = "@growth.system"; 
+
+        // ==========================================
+        // 2. Auth & Login 邏輯 (帳號制)
+        // ==========================================
+        
+        function switchAuthTab(tab) {
+            document.getElementById('tab-login').classList.remove('active');
+            document.getElementById('tab-register').classList.remove('active');
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('registerForm').classList.add('hidden');
+
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            document.getElementById(`${tab}Form`).classList.remove('hidden');
+        }
+
+        async function handleAuth(e, type) {
+            e.preventDefault();
+            
+            try {
+                if (type === 'login') {
+                    const id = document.getElementById('loginId').value.trim();
+                    const pwd = document.getElementById('loginPwd').value;
+                    const email = id + FAKE_DOMAIN; 
+                    
+                    await auth.signInWithEmailAndPassword(email, pwd);
+
+                } else if (type === 'register') {
+                    const name = document.getElementById('regName').value.trim();
+                    const id = document.getElementById('regId').value.trim();
+                    const pwd = document.getElementById('regPwd').value;
+                    const email = id + FAKE_DOMAIN;
+
+                    // 檢查是否為系統第一位使用者 (若是 -> 老闆)
+                    const usersSnap = await db.collection('users').get();
+                    const isFirstUser = usersSnap.empty;
+                    const role = isFirstUser ? 'owner' : 'manager';
+
+                    // 建立帳號
+                    const userCredential = await auth.createUserWithEmailAndPassword(email, pwd);
+                    
+                    // 寫入使用者資料庫
+                    await db.collection('users').doc(userCredential.user.uid).set({
+                        name: name,
+                        username: id,
+                        role: role,
+                        createdAt: new Date(),
+                        managerId: null 
+                    });
+
+                    alert(`註冊成功！身分：${role === 'owner' ? '老闆 (系統管理員)' : '管理師'}`);
+                }
+            } catch (error) {
+                console.error(error);
+                let msg = error.message;
+                if(error.code === 'auth/email-already-in-use') msg = '此帳號已被使用，請更換一個';
+                if(error.code === 'auth/weak-password') msg = '密碼強度太弱 (至少6位)';
+                if(error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') msg = '帳號或密碼錯誤';
+                if(error.code === 'auth/operation-not-allowed') msg = '註冊失敗：請先到 Firebase 後台開啟「電子郵件/密碼」驗證功能！';
+                alert("操作失敗: " + msg);
+            }
+        }
+
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                const doc = await db.collection('users').doc(user.uid).get();
+                if (doc.exists) {
+                    userData = doc.data();
+                    currentUser = user;
+                    
+                    document.getElementById('authSection').classList.add('hidden');
+                    document.getElementById('navUser').classList.remove('hidden');
+                    document.getElementById('navUser').classList.add('flex');
+                    
+                    const roleLabels = { 'owner': '老闆', 'director': '班主任', 'manager': '管理師' };
+                    document.getElementById('userRoleDisplay').innerText = roleLabels[userData.role];
+                    document.getElementById('userNameDisplay').innerText = userData.name;
+
+                    renderDashboard();
+                } else {
+                    alert("查無使用者資料，請聯繫管理員");
+                    auth.signOut();
+                }
+            } else {
+                currentUser = null;
+                userData = null;
+                document.getElementById('authSection').classList.remove('hidden');
+                document.getElementById('navUser').classList.add('hidden');
+                document.getElementById('navUser').classList.remove('flex');
+                
+                ['ownerDashboard', 'directorDashboard', 'managerDashboard'].forEach(id => {
+                    document.getElementById(id).classList.add('hidden');
+                });
+            }
+        });
+
+        function logout() {
+            if(confirm("確定要登出嗎？")) {
+                auth.signOut();
+                location.reload();
+            }
+        }
+
+        function renderDashboard() {
+            document.getElementById('ownerDashboard').classList.add('hidden');
+            document.getElementById('directorDashboard').classList.add('hidden');
+            document.getElementById('managerDashboard').classList.add('hidden');
+
+            if (userData.role === 'owner') {
+                initOwnerDashboard();
+                document.getElementById('ownerDashboard').classList.remove('hidden');
+            } else if (userData.role === 'director') {
+                initDirectorDashboard();
+                document.getElementById('directorDashboard').classList.remove('hidden');
+            } else {
+                initManagerDashboard();
+                document.getElementById('managerDashboard').classList.remove('hidden');
+            }
+        }
+
+        // ==========================================
+        // 3. 管理師功能 (Manager)
+        // ==========================================
+        async function initManagerDashboard() {
+            const container = document.getElementById('managerFamilyList');
+            container.innerHTML = '<div class="col-span-3 text-center py-10"><i class="fa-solid fa-spinner fa-spin text-2xl text-primary"></i> 載入資料中...</div>';
+
+            // 即時監聽資料變動 (推薦做法)
+            db.collection('families').where('managerId', '==', currentUser.uid)
+                .onSnapshot(snapshot => {
+                    container.innerHTML = '';
+                    if (snapshot.empty) {
+                        container.innerHTML = '<div class="col-span-3 text-center text-gray-500 py-10">尚無資料，請點擊右上角新增家庭。</div>';
+                        return;
+                    }
+
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const kid = data.kids[0];
+                        const lastLog = (kid.logs && kid.logs.length) ? kid.logs[kid.logs.length-1] : { height: kid.initialHeight, weight: kid.initialWeight };
+                        const growth = (lastLog.height - kid.initialHeight).toFixed(1);
+                        
+                        const growthIcon = growth > 0 ? '<i class="fa-solid fa-arrow-trend-up text-riskGreen"></i>' : '<i class="fa-solid fa-minus text-gray-400"></i>';
+
+                        const html = `
+                            <div class="bg-card rounded-lg shadow-md hover:shadow-xl transition duration-300 overflow-hidden border border-orange-100 flex flex-col">
+                                <div class="p-4 bg-orange-50 flex justify-between items-center border-b border-orange-100">
+                                    <div>
+                                        <h3 class="font-bold text-lg text-secondary">${data.parentName} <span class="text-xs font-normal bg-white px-1 rounded border border-orange-200">${data.nationality}</span></h3>
+                                    </div>
+                                    <span class="px-2 py-1 rounded text-xs font-bold ${getRiskClass(data.riskLevel)}">
+                                        ${getRiskLabel(data.riskLevel)}
+                                    </span>
+                                </div>
+                                <div class="p-4 flex-grow space-y-2">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg">
+                                            ${kid.name[0]}
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-secondary">${kid.name}</p>
+                                            <p class="text-xs text-gray-500">骨齡: ${kid.boneAge || '-'} 歲</p>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2 text-sm mt-3 bg-white p-2 rounded">
+                                        <div>
+                                            <p class="text-xs text-gray-400">目前身高</p>
+                                            <p class="font-bold text-2xl">${lastLog.height} <span class="text-sm">cm</span></p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs text-gray-400">總長高</p>
+                                            <p class="font-bold text-2xl text-riskGreen">+${growth} <span class="text-sm">cm</span> ${growthIcon}</p>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-2 line-clamp-2 bg-gray-50 p-2 rounded">
+                                        <i class="fa-solid fa-clipboard-list"></i> ${data.statusReport || '暫無回報'}
+                                    </p>
+                                </div>
+                                <div class="p-3 bg-gray-50 border-t border-gray-100">
+                                    <button onclick="openFamilyModal('${doc.id}')" class="w-full bg-white border border-secondary text-secondary py-2 rounded hover:bg-secondary hover:text-white transition text-sm font-bold">
+                                        編輯詳細資料
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        container.innerHTML += html;
+                    });
+                }, err => {
+                    console.error("Firestore 監聽失敗:", err);
+                    container.innerHTML = '<div class="col-span-3 text-center text-riskRed py-10">資料載入錯誤，請檢查 Firestore 權限。</div>';
+                });
+        }
+
+        // ==========================================
+        // 4. Modal 相關功能 (共用)
+        // ==========================================
+        function openFamilyModal(id = null) {
+            const form = document.getElementById('familyForm');
+            form.reset();
+            document.getElementById('familyId').value = id || '';
+            document.getElementById('modalTitle').innerText = id ? '編輯家庭資料' : '新增家庭資料';
+            
+            document.getElementById('logMonth').value = new Date().toISOString().slice(0, 7);
+
+            if (id) {
+                db.collection('families').doc(id).get().then(doc => {
+                    if(doc.exists) {
+                        const d = doc.data();
+                        const k = d.kids[0];
+                        document.getElementById('parentName').value = d.parentName;
+                        document.getElementById('nationality').value = d.nationality;
+                        document.querySelector(`input[name="risk"][value="${d.riskLevel}"]`).checked = true;
+                        document.getElementById('statusReport').value = d.statusReport || '';
+                        
+                        document.getElementById('kidName').value = k.name;
+                        document.getElementById('kidDob').value = k.dob;
+                        document.getElementById('kidBoneAge').value = k.boneAge || '';
+                        document.getElementById('initHeight').value = k.initialHeight;
+                        document.getElementById('initWeight').value = k.initialWeight;
+                    }
+                });
+            }
+            
+            document.getElementById('familyModal').classList.remove('hidden');
+        }
+
+        function closeFamilyModal() {
+            document.getElementById('familyModal').classList.add('hidden');
+        }
+
+        async function saveFamily(e) {
+            e.preventDefault();
+            const id = document.getElementById('familyId').value;
+            const parentName = document.getElementById('parentName').value;
+            const nationality = document.getElementById('nationality').value;
+            const riskLevel = document.querySelector('input[name="risk"]:checked').value;
+            const statusReport = document.getElementById('statusReport').value;
+            
+            const kidData = {
+                name: document.getElementById('kidName').value,
+                dob: document.getElementById('kidDob').value,
+                boneAge: document.getElementById('kidBoneAge').value ? Number(document.getElementById('kidBoneAge').value) : null,
+                initialHeight: Number(document.getElementById('initHeight').value),
+                initialWeight: Number(document.getElementById('initWeight').value),
+            };
+
+            const logMonth = document.getElementById('logMonth').value;
+            const logH = document.getElementById('logHeight').value;
+            const logW = document.getElementById('logWeight').value;
+            let newLog = null;
+            if(logMonth && logH && logW) {
+                newLog = { month: logMonth, height: Number(logH), weight: Number(logW), recordedAt: new Date().toISOString().split('T')[0] };
+            }
+
+            const baseData = {
+                managerId: currentUser.uid,
+                managerName: userData.name,
+                parentName,
+                nationality,
+                riskLevel,
+                statusReport,
+                updatedAt: new Date()
+            };
+
+            try {
+                if(id) {
+                    const oldDoc = await db.collection('families').doc(id).get();
+                    let logs = oldDoc.data().kids[0].logs || [];
+                    
+                    if(newLog) {
+                        // 檢查是否已存在該月紀錄，如果存在就更新，否則新增
+                        const existingIndex = logs.findIndex(log => log.month === newLog.month);
+                        if(existingIndex > -1) {
+                            logs[existingIndex] = newLog; // 更新
+                        } else {
+                            logs.push(newLog); // 新增
+                        }
+                    }
+                    
+                    kidData.logs = logs.sort((a, b) => a.month.localeCompare(b.month));
+                    baseData.kids = [kidData];
+                    await db.collection('families').doc(id).update(baseData);
+                } else {
+                    kidData.logs = newLog ? [newLog] : [];
+                    baseData.kids = [kidData];
+                    await db.collection('families').add(baseData);
+                }
+                closeFamilyModal();
+                // 成功後畫面會自動更新 (因 onSnapshot)
+            } catch (err) {
+                alert("儲存失敗: " + err.message);
+            }
+        }
+
+        // ==========================================
+        // 5. 老闆功能 (Owner)
+        // ==========================================
+        
+        async function initOwnerDashboard() {
+            // 讀取所有員工 (Users)
+            db.collection('users').onSnapshot(uSnap => {
+                const staffDiv = document.getElementById('staffList');
+                staffDiv.innerHTML = '';
+                
+                uSnap.forEach(doc => {
+                    const u = doc.data();
+                    if (u.role === 'owner') return; 
+                    
+                    staffDiv.innerHTML += `
+                        <div class="bg-white p-4 rounded border flex justify-between items-center shadow-sm">
+                            <div>
+                                <p class="font-bold text-secondary">${u.name}</p>
+                                <p class="text-xs text-gray-500">帳號: ${u.username}</p>
+                                <span class="text-xs px-2 py-0.5 rounded ${u.role==='director'?'bg-primary text-white':'bg-gray-200 text-gray-600'}">${u.role==='director'?'班主任':'管理師'}</span>
+                            </div>
+                            <div class="flex gap-2">
+                                ${u.role !== 'director' ? 
+                                    `<button onclick="changeRole('${doc.id}', 'director')" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200">升遷</button>` : 
+                                    `<button onclick="changeRole('${doc.id}', 'manager')" class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200">降職</button>`
+                                }
+                                <button onclick="deleteStaff('${doc.id}')" class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200">移除</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+
+            // 讀取所有家庭 (Families)
+            db.collection('families').onSnapshot(fSnap => {
+                let allFamiliesCache = [];
+                let stats = { total: 0, risk: 0, totalGrowth: 0, kidCount: 0, bday: 0 };
+                const todayMonth = new Date().getMonth(); // 0-11
+
+                fSnap.forEach(d => { allFamiliesCache.push({id: d.id, ...d.data()}) });
+
+                // 計算統計數據
+                const nations = [...new Set(allFamiliesCache.map(f => f.nationality))];
+                const nationDiv = document.getElementById('nationFilters');
+                nationDiv.innerHTML = '';
+                nations.forEach(n => {
+                    nationDiv.innerHTML += `<button onclick="filterOwnerTable('nation', '${n}')" class="bg-white border border-secondary text-secondary px-3 py-1 rounded text-sm hover:bg-orange-50 whitespace-nowrap">${n}</button>`;
+                });
+                
+                allFamiliesCache.forEach(f => {
+                    stats.total++;
+                    if(f.riskLevel === 'red') stats.risk++;
+                    const k = f.kids[0];
+                    const currentH = (k.logs && k.logs.length) ? k.logs[k.logs.length-1].height : k.initialHeight;
+                    stats.totalGrowth += (currentH - k.initialHeight);
+                    stats.kidCount++;
+
+                    const bMonth = new Date(k.dob).getMonth(); 
+                    if(bMonth === todayMonth) stats.bday++;
+                });
+
+                document.getElementById('ownerTotalFamilies').innerText = stats.total;
+                document.getElementById('ownerRiskCount').innerText = stats.risk;
+                document.getElementById('ownerBirthdayCount').innerText = stats.bday;
+                document.getElementById('ownerAvgGrowth').innerText = stats.kidCount ? (stats.totalGrowth / stats.kidCount).toFixed(1) + " cm" : "0";
+
+                // 預設顯示全部
+                filterOwnerTable('all', null, allFamiliesCache);
+            });
+        }
+
+        async function changeRole(uid, newRole) {
+            if(confirm(`確定要變更權限為 ${newRole === 'director' ? '班主任' : '管理師'} 嗎？`)) {
+                await db.collection('users').doc(uid).update({ role: newRole });
+            }
+        }
+
+        async function deleteStaff(uid) {
+            if(confirm("確定移除此員工？(注意：這只會刪除資料庫紀錄，無法直接刪除登入帳號，需請其勿再登入)")) {
+                await db.collection('users').doc(uid).delete();
+            }
+        }
+
+        function filterOwnerTable(type, val, allFamiliesCache) {
+            const tbody = document.getElementById('ownerFamilyTable');
+            tbody.innerHTML = '';
+            
+            let filtered = allFamiliesCache || [];
+            if (type === 'risk') filtered = filtered.filter(f => f.riskLevel === 'red');
+            if (type === 'nation') filtered = filtered.filter(f => f.nationality === val);
+
+            const todayMonth = new Date().getMonth(); 
+
+            filtered.forEach(f => {
+                const k = f.kids[0];
+                const currentH = (k.logs && k.logs.length) ? k.logs[k.logs.length-1].height : k.initialHeight;
+                const grow = (currentH - k.initialHeight).toFixed(1);
+                const bMonth = new Date(k.dob).getMonth();
+                const isBday = bMonth === todayMonth;
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-orange-50 transition border-b border-orange-50">
+                        <td class="p-3 font-bold text-gray-600">${f.nationality}</td>
+                        <td class="p-3">
+                            <div class="font-bold">${k.name}</div>
+                            <div class="text-xs text-gray-400">${k.dob} ${isBday ? '<i class="fa-solid fa-cake-candles text-primary animate-bounce ml-1"></i>' : ''}</div>
+                        </td>
+                        <td class="p-3">
+                            <div>${currentH} cm</div>
+                            <div class="text-xs text-riskGreen font-bold">+${grow} cm</div>
+                        </td>
+                        <td class="p-3 text-sm">${f.managerName}</td>
+                        <td class="p-3 text-center"><span class="risk-dot ${getRiskDotClass(f.riskLevel)}"></span></td>
+                    </tr>
+                `;
+            });
+        }
+
+        // ==========================================
+        // 6. 班主任功能 (Director)
+        // ==========================================
+        async function initDirectorDashboard() {
+             db.collection('families').onSnapshot(fSnap => {
+                const teamDiv = document.getElementById('directorTeamList');
+                const riskDiv = document.getElementById('directorRiskList');
+                
+                teamDiv.innerHTML = '';
+                riskDiv.innerHTML = '';
+
+                let managerStats = {};
+                
+                fSnap.forEach(doc => {
+                    const d = doc.data();
+                    const k = d.kids[0];
+                    const lastH = (k.logs && k.logs.length) ? k.logs[k.logs.length-1].height : k.initialHeight;
+
+                    // 統計管理師
+                    if(!managerStats[d.managerId]) managerStats[d.managerId] = { name: d.managerName, total: 0, stable: 0, risk: 0 };
+                    managerStats[d.managerId].total++;
+                    if(d.riskLevel === 'green') managerStats[d.managerId].stable++;
+                    
+                    // 風險列表
+                    if(d.riskLevel === 'red' || d.riskLevel === 'yellow') {
+                        riskDiv.innerHTML += `
+                            <div class="p-3 border-l-4 ${d.riskLevel==='red'?'border-riskRed bg-red-50':'border-riskYellow bg-yellow-50'} rounded shadow-sm flex justify-between items-center">
+                                <div>
+                                    <p class="font-bold text-secondary">${d.parentName} (${d.kids[0].name})</p>
+                                    <p class="text-xs text-gray-500">負責人: ${d.managerName}</p>
+                                    <p class="text-xs text-gray-500">骨齡: ${k.boneAge || '-'} / 身高: ${lastH}cm</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-xs font-bold px-2 py-1 bg-white rounded shadow-sm">${d.riskLevel==='red'?'高風險':'觀察'}</span>
+                                    <p class="text-xs text-gray-400 mt-1">${d.statusReport || '無回報'}</p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+
+                // 渲染管理師卡片
+                Object.values(managerStats).forEach(m => {
+                    const percent = Math.round((m.stable/m.total)*100);
+                    teamDiv.innerHTML += `
+                        <div class="bg-white p-4 rounded border border-orange-100 flex justify-between items-center shadow-sm">
+                            <div>
+                                <p class="font-bold text-lg text-secondary">${m.name}</p>
+                                <p class="text-xs text-gray-500">管理 ${m.total} 戶家庭</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-2xl font-bold ${percent < 60 ? 'text-riskRed' : 'text-riskGreen'}">${percent}%</p>
+                                <p class="text-xs text-gray-400">穩定率</p>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                if(riskDiv.innerHTML === '') riskDiv.innerHTML = '<p class="text-gray-400 text-center py-4">目前無須關注的風險家庭</p>';
+            });
+        }
+
+        // Helper classes
+        function getRiskClass(level) {
+            if(level === 'red') return 'bg-red-100 text-riskRed';
+            if(level === 'yellow') return 'bg-yellow-100 text-riskYellow';
+            return 'bg-green-100 text-riskGreen';
+        }
+        function getRiskLabel(level) {
+            if(level === 'red') return '高風險';
+            if(level === 'yellow') return '觀察中';
+            return '穩定';
+        }
+        function getRiskDotClass(level) {
+            if(level === 'red') return 'bg-riskRed';
+            if(level === 'yellow') return 'bg-riskYellow';
+            return 'bg-riskGreen';
+        }
+
+    </script>
+</body>
+</html>
