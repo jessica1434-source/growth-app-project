@@ -17,7 +17,7 @@
                         bg: '#FFF9C4', // 鵝黃色背景 (主要)
                         card: '#FFFFF0', // 象牙白卡片
                         primary: '#FF9800', // 溫暖橘 (按鈕/重點)
-                        secondary: '#C36E1B', // 新：溫暖紅棕色 (導航/主要文字)
+                        secondary: '#C36E1B', // 溫暖紅棕色 (導航/主要文字)
                         accent: '#FFB74D', // 淺橘
                         riskRed: '#D32F2F', // 風險紅
                         riskYellow: '#FBC02D',
@@ -31,20 +31,18 @@
         body { font-family: "Microsoft JhengHei", sans-serif; background-color: #FFF9C4; color: #C36E1B; }
         .hidden { display: none !important; }
         .risk-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-        /* 頁籤切換樣式 */
         .tab-btn { border-bottom: 3px solid transparent; opacity: 0.8; }
         .tab-btn.active { border-bottom: 3px solid #FF9800; opacity: 1; font-weight: bold; }
-        /* 確保完全避開粉紅色 */
         ::selection { background: #FFCC80; color: #C36E1B; }
+        .loading-overlay { background-color: rgba(255, 255, 255, 0.7); z-index: 100; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <!-- 導航列 (使用新的紅棕色 secondary) -->
+    <!-- 導航列 -->
     <nav class="bg-secondary text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-50">
         <div class="flex items-center gap-2">
             <i class="fa-solid fa-sun text-yellow-300 text-xl animate-pulse"></i>
-            <!-- 移除 "小太陽" -->
             <h1 class="text-xl font-bold tracking-wide">兒童生長管理系統</h1>
         </div>
         <div id="navUser" class="hidden flex items-center gap-3">
@@ -57,6 +55,11 @@
             </button>
         </div>
     </nav>
+    
+    <!-- 全域錯誤/連線狀態提示 -->
+    <div id="connectionStatus" class="bg-red-100 text-red-700 p-3 text-center hidden font-bold">
+        <i class="fa-solid fa-exclamation-triangle mr-2"></i> 正在檢查連線設定...
+    </div>
 
     <!-- 主要內容區 -->
     <main class="flex-grow p-4 md:p-6 max-w-7xl mx-auto w-full">
@@ -350,20 +353,34 @@
         // ==========================================
         // 1. Firebase 設定 (請在此處填入您的 Config)
         // ==========================================
-        const firebaseConfig = {
-            // 請替換成您的專案設定
-            apiKey: "AIzaSyCKTt1jsKazPFJUTXIyJKqs2NGIyRJfzRo",
-            authDomain: "growth-app-final.firebaseapp.com",
-            projectId: "growth-app-final",
-            storageBucket: "growth-app-final.firebasestorage.app",
-            messagingSenderId: "853085915536",
-            appId: "1:853085915536:web:8853f3f25235aacaf74b15"
-        };
+        // 🚨 重要：請將此處的設定替換為您 j-growth-app-new 專案的實際 Config 資訊
+    const firebaseConfig = {
+    apiKey: "AIzaSyBS8RCrZArtOLddiTSK8zt5VD2ODuYxLoA", 
+    authDomain: "j-growth-app-new.firebaseapp.com",
+    projectId: "j-growth-app-new",
+    storageBucket: "j-growth-app-new.firebasestorage.app",
+    messagingSenderId: "573660567724",
+    appId: "1:573660567724:web:f8464351a96e276112a709"
+};
+        
+        // 全域狀態 DOM
+        const statusDiv = document.getElementById('connectionStatus');
 
-        // 初始化
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
+        // 初始化 Firebase (使用 try/catch 檢查 config 是否正確)
+        let app, auth, db;
+        try {
+            app = firebase.initializeApp(firebaseConfig);
+            auth = firebase.auth();
+            db = firebase.firestore();
+            console.log("Firebase App 初始化成功。");
+            statusDiv.classList.add('hidden'); // 如果成功，隱藏錯誤提示
+        } catch (error) {
+            console.error("Firebase 初始化失敗 (Config 錯誤或網路問題):", error);
+            statusDiv.classList.remove('hidden');
+            statusDiv.innerHTML = `<i class="fa-solid fa-exclamation-triangle mr-2"></i> <strong>嚴重錯誤:</strong> Firebase 設定檔錯誤或網路連線失敗。請檢查您的 Console 輸出與 Config。`;
+            throw new Error("初始化失敗");
+        }
+
 
         let currentUser = null;
         let userData = null;
@@ -400,15 +417,12 @@
                     const pwd = document.getElementById('regPwd').value;
                     const email = id + FAKE_DOMAIN;
 
-                    // 檢查是否為系統第一位使用者 (若是 -> 老闆)
                     const usersSnap = await db.collection('users').get();
                     const isFirstUser = usersSnap.empty;
                     const role = isFirstUser ? 'owner' : 'manager';
 
-                    // 建立帳號
                     const userCredential = await auth.createUserWithEmailAndPassword(email, pwd);
                     
-                    // 寫入使用者資料庫
                     await db.collection('users').doc(userCredential.user.uid).set({
                         name: name,
                         username: id,
@@ -420,11 +434,12 @@
                     alert(`註冊成功！身分：${role === 'owner' ? '老闆 (系統管理員)' : '管理師'}`);
                 }
             } catch (error) {
-                console.error(error);
+                console.error("Auth 錯誤:", error);
                 let msg = error.message;
-                if(error.code === 'auth/email-already-in-use') msg = '此帳號已被使用，請更換一個';
-                if(error.code === 'auth/weak-password') msg = '密碼強度太弱 (至少6位)';
-                if(error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') msg = '帳號或密碼錯誤';
+                if(error.code === 'auth/network-request-failed') msg = '網路連線失敗或 Firebase Config 設定錯誤。';
+                if(error.code === 'auth/email-already-in-use') msg = '此帳號已被使用，請更換一個。';
+                if(error.code === 'auth/weak-password') msg = '密碼強度太弱 (至少6位)。';
+                if(error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') msg = '帳號或密碼錯誤。';
                 if(error.code === 'auth/operation-not-allowed') msg = '註冊失敗：請先到 Firebase 後台開啟「電子郵件/密碼」驗證功能！';
                 alert("操作失敗: " + msg);
             }
@@ -432,24 +447,31 @@
 
         auth.onAuthStateChanged(async (user) => {
             if (user) {
-                const doc = await db.collection('users').doc(user.uid).get();
-                if (doc.exists) {
-                    userData = doc.data();
-                    currentUser = user;
-                    
-                    document.getElementById('authSection').classList.add('hidden');
-                    document.getElementById('navUser').classList.remove('hidden');
-                    document.getElementById('navUser').classList.add('flex');
-                    
-                    const roleLabels = { 'owner': '老闆', 'director': '班主任', 'manager': '管理師' };
-                    document.getElementById('userRoleDisplay').innerText = roleLabels[userData.role];
-                    document.getElementById('userNameDisplay').innerText = userData.name;
+                try {
+                    const doc = await db.collection('users').doc(user.uid).get();
+                    if (doc.exists) {
+                        userData = doc.data();
+                        currentUser = user;
+                        
+                        document.getElementById('authSection').classList.add('hidden');
+                        document.getElementById('navUser').classList.remove('hidden');
+                        document.getElementById('navUser').classList.add('flex');
+                        
+                        const roleLabels = { 'owner': '老闆', 'director': '班主任', 'manager': '管理師' };
+                        document.getElementById('userRoleDisplay').innerText = roleLabels[userData.role];
+                        document.getElementById('userNameDisplay').innerText = userData.name;
 
-                    renderDashboard();
-                } else {
-                    alert("查無使用者資料，請聯繫管理員");
+                        renderDashboard();
+                    } else {
+                        alert("查無使用者資料，請聯繫管理員");
+                        auth.signOut();
+                    }
+                } catch (error) {
+                    console.error("資料載入失敗:", error);
+                    alert("資料庫連線或權限錯誤，請檢查 Firestore 狀態。");
                     auth.signOut();
                 }
+
             } else {
                 currentUser = null;
                 userData = null;
@@ -494,7 +516,6 @@
             const container = document.getElementById('managerFamilyList');
             container.innerHTML = '<div class="col-span-3 text-center py-10"><i class="fa-solid fa-spinner fa-spin text-2xl text-primary"></i> 載入資料中...</div>';
 
-            // 即時監聽資料變動 (推薦做法)
             db.collection('families').where('managerId', '==', currentUser.uid)
                 .onSnapshot(snapshot => {
                     container.innerHTML = '';
@@ -556,7 +577,8 @@
                     });
                 }, err => {
                     console.error("Firestore 監聽失敗:", err);
-                    container.innerHTML = '<div class="col-span-3 text-center text-riskRed py-10">資料載入錯誤，請檢查 Firestore 權限。</div>';
+                    statusDiv.classList.remove('hidden');
+                    statusDiv.innerHTML = `<i class="fa-solid fa-exclamation-triangle mr-2"></i> 資料庫連線失敗，請檢查 Firestore 安全規則。`;
                 });
         }
 
@@ -637,12 +659,11 @@
                     let logs = oldDoc.data().kids[0].logs || [];
                     
                     if(newLog) {
-                        // 檢查是否已存在該月紀錄，如果存在就更新，否則新增
                         const existingIndex = logs.findIndex(log => log.month === newLog.month);
                         if(existingIndex > -1) {
-                            logs[existingIndex] = newLog; // 更新
+                            logs[existingIndex] = newLog; 
                         } else {
-                            logs.push(newLog); // 新增
+                            logs.push(newLog); 
                         }
                     }
                     
@@ -655,7 +676,6 @@
                     await db.collection('families').add(baseData);
                 }
                 closeFamilyModal();
-                // 成功後畫面會自動更新 (因 onSnapshot)
             } catch (err) {
                 alert("儲存失敗: " + err.message);
             }
@@ -666,7 +686,6 @@
         // ==========================================
         
         async function initOwnerDashboard() {
-            // 讀取所有員工 (Users)
             db.collection('users').onSnapshot(uSnap => {
                 const staffDiv = document.getElementById('staffList');
                 staffDiv.innerHTML = '';
@@ -694,20 +713,18 @@
                 });
             });
 
-            // 讀取所有家庭 (Families)
             db.collection('families').onSnapshot(fSnap => {
                 let allFamiliesCache = [];
                 let stats = { total: 0, risk: 0, totalGrowth: 0, kidCount: 0, bday: 0 };
-                const todayMonth = new Date().getMonth(); // 0-11
+                const todayMonth = new Date().getMonth(); 
 
                 fSnap.forEach(d => { allFamiliesCache.push({id: d.id, ...d.data()}) });
 
-                // 計算統計數據
                 const nations = [...new Set(allFamiliesCache.map(f => f.nationality))];
                 const nationDiv = document.getElementById('nationFilters');
                 nationDiv.innerHTML = '';
                 nations.forEach(n => {
-                    nationDiv.innerHTML += `<button onclick="filterOwnerTable('nation', '${n}')" class="bg-white border border-secondary text-secondary px-3 py-1 rounded text-sm hover:bg-orange-50 whitespace-nowrap">${n}</button>`;
+                    nationDiv.innerHTML += `<button onclick="filterOwnerTable('nation', '${n}', allFamiliesCache)" class="bg-white border border-secondary text-secondary px-3 py-1 rounded text-sm hover:bg-orange-50 whitespace-nowrap">${n}</button>`;
                 });
                 
                 allFamiliesCache.forEach(f => {
@@ -727,7 +744,6 @@
                 document.getElementById('ownerBirthdayCount').innerText = stats.bday;
                 document.getElementById('ownerAvgGrowth').innerText = stats.kidCount ? (stats.totalGrowth / stats.kidCount).toFixed(1) + " cm" : "0";
 
-                // 預設顯示全部
                 filterOwnerTable('all', null, allFamiliesCache);
             });
         }
@@ -797,12 +813,10 @@
                     const k = d.kids[0];
                     const lastH = (k.logs && k.logs.length) ? k.logs[k.logs.length-1].height : k.initialHeight;
 
-                    // 統計管理師
                     if(!managerStats[d.managerId]) managerStats[d.managerId] = { name: d.managerName, total: 0, stable: 0, risk: 0 };
                     managerStats[d.managerId].total++;
                     if(d.riskLevel === 'green') managerStats[d.managerId].stable++;
                     
-                    // 風險列表
                     if(d.riskLevel === 'red' || d.riskLevel === 'yellow') {
                         riskDiv.innerHTML += `
                             <div class="p-3 border-l-4 ${d.riskLevel==='red'?'border-riskRed bg-red-50':'border-riskYellow bg-yellow-50'} rounded shadow-sm flex justify-between items-center">
@@ -820,7 +834,6 @@
                     }
                 });
 
-                // 渲染管理師卡片
                 Object.values(managerStats).forEach(m => {
                     const percent = Math.round((m.stable/m.total)*100);
                     teamDiv.innerHTML += `
