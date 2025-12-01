@@ -46,20 +46,39 @@
         .log-warn { color: #ffcc00; }
         .log-info { color: #00ff00; }
 
-        /* ★ 新增：標記刪除樣式 ★ */
+        /* 復原提示框 (Toast) 動畫 */
+        #undoToast {
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+            transform: translateY(100%);
+            opacity: 0;
+        }
+        #undoToast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        /* 標記刪除樣式 */
         .marked-for-deletion {
-            background-color: #fee2e2 !important; /* 紅色背景 */
+            background-color: #fee2e2 !important;
             opacity: 0.6;
             text-decoration: line-through;
             border: 1px dashed #ef4444 !important;
         }
         .marked-for-deletion input {
-            pointer-events: none; /* 禁止編輯 */
+            pointer-events: none;
             background-color: transparent;
         }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
+
+    <!-- 復原提示框 (Toast) -->
+    <div id="undoToast" class="fixed bottom-40 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-2xl z-[9999] flex items-center gap-4 hidden">
+        <span id="undoMessage">已刪除</span>
+        <button onclick="executeUndo()" class="bg-yellow-500 text-black px-3 py-1 rounded font-bold hover:bg-yellow-400 transition">
+            <i class="fa-solid fa-rotate-left"></i> 復原
+        </button>
+        <button onclick="closeToast()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-times"></i></button>
+    </div>
 
     <!-- 診斷日誌視窗 -->
     <div id="debugConsole">
@@ -146,7 +165,7 @@
                 <div><h2 class="text-2xl font-bold text-gray-800">我的管理家庭</h2><p class="text-gray-500 text-sm">親自負責的個案管理</p></div>
                 <button onclick="openFamilyModal()" class="bg-primary text-white px-5 py-2 rounded-full shadow hover:bg-orange-600 font-bold flex items-center gap-2"><i class="fa-solid fa-plus"></i> 新增家庭</button>
             </div>
-            <div id="directorMyFamilyList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"></div>
+            <div id="directorMyFamilyList" class="flex flex-col gap-3 mb-8"></div>
 
              <div class="bg-yellow-100 border-l-4 border-primary text-yellow-800 p-4 rounded shadow-sm"><p class="font-bold">班主任督導模式</p><p class="text-sm">僅供檢視旗下管理師績效與家庭狀況。</p></div>
             
@@ -163,113 +182,76 @@
                 <div><h2 class="text-2xl font-bold text-gray-800">我的家庭管理</h2><p class="text-gray-500 text-sm">管理與紀錄孩童生長曲線</p></div>
                 <button onclick="openFamilyModal()" class="bg-primary text-white px-5 py-2 rounded-full shadow hover:bg-orange-600 font-bold flex items-center gap-2"><i class="fa-solid fa-plus"></i> 新增家庭</button>
             </div>
-            <div id="managerFamilyList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            <!-- 橫式列表容器 -->
+            <div id="managerFamilyList" class="flex flex-col gap-3"></div>
         </div>
     </main>
 
-    <!-- Modal: 使用 Flex Column 佈局，確保 Footer 固定 -->
     <div id="familyModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-xl w-full max-w-4xl shadow-2xl flex flex-col max-h-[90vh] border-t-8 border-primary">
-            
-            <!-- Modal Header (Fixed) -->
-            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+        <div class="bg-white rounded-xl w-full max-w-4xl shadow-2xl relative max-h-[90vh] overflow-y-auto border-t-8 border-primary">
+            <!-- Modal Header -->
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
                 <h3 id="modalTitle" class="text-2xl font-bold text-gray-800">家庭資料</h3>
                 <button onclick="closeFamilyModal()" class="text-gray-400 hover:text-red-600 text-2xl"><i class="fa-solid fa-times"></i></button>
             </div>
             
-            <!-- Form Start -->
-            <form id="familyForm" onsubmit="saveFamily(event)" class="flex flex-col flex-grow overflow-hidden">
+            <!-- Form -->
+            <form id="familyForm" onsubmit="saveFamily(event)" class="space-y-6 p-6">
                 <input type="hidden" id="familyId">
-
+                
                 <!-- Tabs -->
-                <div class="flex border-b border-gray-200 bg-gray-50 px-6 pt-2">
+                <div class="flex border-b border-gray-200 mb-4">
                     <button type="button" onclick="switchModalTab('basic')" id="tab-basic" class="px-4 py-2 text-sm font-bold text-primary border-b-2 border-primary">基本資料</button>
                     <button type="button" onclick="switchModalTab('records')" id="tab-records" class="px-4 py-2 text-sm font-bold text-gray-500 hover:text-primary">紀錄與追蹤</button>
                 </div>
-
-                <!-- Content Body (Scrollable) -->
-                <div class="flex-grow overflow-y-auto p-6 space-y-6">
-                    
-                    <!-- Tab 1: 基本資料 -->
-                    <div id="content-basic">
-                        <div class="bg-gray-50 p-4 rounded border border-gray-200 mb-4">
-                            <h4 class="font-bold text-gray-800 mb-3">家長資訊與合約狀態</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div><label class="block text-xs font-bold text-primary uppercase mb-1">家長姓名</label><input type="text" id="parentName" class="w-full border p-2 rounded" required></div>
-                                <div><label class="block text-xs font-bold text-primary uppercase mb-1">國籍</label><input type="text" id="nationality" class="w-full border p-2 rounded" placeholder="請填寫中文" required></div>
-                                <div>
-                                    <label class="block text-xs font-bold text-primary uppercase mb-1">加入/續約日期</label>
-                                    <input type="date" id="joinDate" class="w-full border p-2 rounded bg-white focus:bg-white transition" max="9999-12-31">
-                                    <p id="dateReminder" class="text-xs text-red-500 mt-1 hidden font-bold animate-pulse"><i class="fa-solid fa-circle-exclamation"></i> 請重新設定日期！</p>
-                                </div>
-                            </div>
-                            
-                            <div class="mt-3">
-                                <label class="block text-xs font-bold text-primary uppercase mb-1">家庭狀況說明 (重點提醒)</label>
-                                <textarea id="familyNote" class="w-full border p-2 rounded h-20 placeholder-gray-400 text-sm" placeholder="例如：家長工作忙碌，需晚上聯繫..."></textarea>
-                            </div>
-
-                            <div class="mt-3">
-                                <label class="inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="isRenewal" class="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary" onchange="toggleDateReminder()">
-                                    <span class="ml-2 text-sm font-bold text-gray-700">此為續約家庭</span>
-                                </label>
+                
+                <!-- Content: Basic -->
+                <div id="content-basic" class="space-y-6">
+                    <div class="bg-gray-50 p-4 rounded border border-gray-200">
+                        <h4 class="font-bold text-gray-800 mb-3">家長資訊與合約狀態</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div><label class="block text-xs font-bold text-primary uppercase mb-1">家長姓名</label><input type="text" id="parentName" class="w-full border p-2 rounded" required></div>
+                            <div><label class="block text-xs font-bold text-primary uppercase mb-1">國籍</label><input type="text" id="nationality" class="w-full border p-2 rounded" placeholder="請填寫中文" required></div>
+                            <div>
+                                <label class="block text-xs font-bold text-primary uppercase mb-1">加入/續約日期</label>
+                                <input type="date" id="joinDate" class="w-full border p-2 rounded bg-white focus:bg-white transition" max="9999-12-31">
+                                <p id="dateReminder" class="text-xs text-red-500 mt-1 hidden font-bold animate-pulse"><i class="fa-solid fa-circle-exclamation"></i> 請重新設定日期！</p>
                             </div>
                         </div>
-                        <div class="bg-infoBlue p-4 rounded border border-infoDark">
-                            <div class="flex justify-between items-center mb-3">
-                                <h4 class="font-bold text-gray-800"><i class="fa-solid fa-baby"></i> 孩童資料</h4>
-                                <button type="button" onclick="addKidField()" id="btnAddKid" class="text-xs bg-white border border-infoDark text-infoDark px-2 py-1 rounded hover:bg-infoDark hover:text-white transition">+ 新增孩童</button>
-                            </div>
-                            <div id="kidsContainer" class="space-y-3"></div>
-                        </div>
+                        <div class="mt-3"><label class="block text-xs font-bold text-primary uppercase mb-1">家庭狀況說明 (重點提醒)</label><textarea id="familyNote" class="w-full border p-2 rounded h-20 placeholder-gray-400 text-sm" placeholder="例如：家長工作忙碌，需晚上聯繫..."></textarea></div>
+                        <div class="mt-3"><label class="inline-flex items-center cursor-pointer"><input type="checkbox" id="isRenewal" class="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary" onchange="toggleDateReminder()"><span class="ml-2 text-sm font-bold text-gray-700">此為續約家庭</span></label></div>
                     </div>
+                    <div class="bg-infoBlue p-4 rounded border border-infoDark">
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="font-bold text-gray-800"><i class="fa-solid fa-baby"></i> 孩童資料</h4>
+                            <button type="button" onclick="addKidField()" id="btnAddKid" class="text-xs bg-white border border-infoDark text-infoDark px-2 py-1 rounded hover:bg-infoDark hover:text-white transition">+ 新增孩童</button>
+                        </div>
+                        <div id="kidsContainer" class="space-y-3"></div>
+                    </div>
+                </div>
 
-                    <!-- Tab 2: 每月紀錄 (優化版) -->
-                    <div id="content-records" class="hidden">
-                        <div class="bg-yellow-50 p-4 rounded border border-yellow-200 mb-4 flex flex-col md:flex-row gap-4 justify-between items-center">
-                            <div class="w-full md:w-1/2">
-                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">選擇孩童</label>
-                                <select id="recordKidSelect" class="w-full border p-2 rounded" onchange="renderKidLogs()"></select>
-                            </div>
-                            <div class="w-full md:w-1/2">
-                                <label class="block text-xs font-bold text-primary uppercase mb-1">本月評估風險</label>
-                                <div class="flex gap-2">
-                                    <label class="flex-1 cursor-pointer border p-2 rounded text-center hover:bg-green-50 bg-white text-sm"><input type="radio" name="risk" value="green" class="mr-1" checked> <span class="text-riskGreen font-bold">穩定</span></label>
-                                    <label class="flex-1 cursor-pointer border p-2 rounded text-center hover:bg-yellow-50 bg-white text-sm"><input type="radio" name="risk" value="yellow" class="mr-1"> <span class="text-riskYellow font-bold">觀察</span></label>
-                                    <label class="flex-1 cursor-pointer border p-2 rounded text-center hover:bg-red-50 bg-white text-sm"><input type="radio" name="risk" value="red" class="mr-1"> <span class="text-riskRed font-bold">高險</span></label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="bg-white p-4 rounded border border-gray-200 shadow-sm mb-4" id="logFormContainer">
-                            <h5 class="font-bold text-gray-800 mb-3 border-b pb-1">新增/更新紀錄</h5>
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                                <div><label class="text-xs text-gray-500">日期</label><input type="date" id="logDate" class="w-full border p-1 rounded text-sm" max="9999-12-31"></div>
-                                <div><label class="text-xs text-gray-500">身高 (cm)</label><input type="number" step="0.1" id="logHeight" class="w-full border p-1 rounded text-sm"></div>
-                                <div><label class="text-xs text-gray-500">體重 (kg)</label><input type="number" step="0.1" id="logWeight" class="w-full border p-1 rounded text-sm"></div>
-                            </div>
-                            <div class="grid grid-cols-3 gap-3 mb-3">
-                                <div><label class="text-xs text-gray-500">推拿 (次)</label><input type="text" id="logMassage" class="w-full border p-1 rounded text-sm"></div>
-                                <div><label class="text-xs text-gray-500">穴道 (次)</label><input type="text" id="logAcupoint" class="w-full border p-1 rounded text-sm"></div>
-                                <div><label class="text-xs text-gray-500">運動 (次)</label><input type="text" id="logExercise" class="w-full border p-1 rounded text-sm"></div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="text-xs text-gray-500">本月管理狀況回報 (明細)</label>
-                                <textarea id="logStatus" class="w-full border p-1 rounded text-sm h-16" placeholder="填寫本月狀況..."></textarea>
-                                <textarea id="statusReport" class="hidden"></textarea>
-                            </div>
-                            <button type="button" onclick="saveLogDirectly()" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 font-bold text-sm shadow"><i class="fa-solid fa-floppy-disk"></i> 新增並儲存紀錄</button>
-                        </div>
-                        <div class="bg-white rounded border border-gray-200 overflow-hidden">
-                            <div class="bg-gray-100 p-2 font-bold text-xs text-gray-600">歷史紀錄明細</div>
-                            <div id="logsHistoryTable" class="max-h-64 overflow-y-auto scrollbar-thin"></div>
-                        </div>
+                <!-- Content: Records -->
+                <div id="content-records" class="hidden space-y-6">
+                    <div class="bg-yellow-50 p-4 rounded border border-yellow-200 mb-4 flex flex-col md:flex-row gap-4 justify-between items-center">
+                        <div class="w-full md:w-1/2"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">選擇孩童</label><select id="recordKidSelect" class="w-full border p-2 rounded" onchange="renderKidLogs()"></select></div>
+                        <div class="w-full md:w-1/2"><label class="block text-xs font-bold text-primary uppercase mb-1">本月評估風險</label><div class="flex gap-2"><label class="flex-1 cursor-pointer border p-2 rounded text-center hover:bg-green-50 bg-white text-sm"><input type="radio" name="risk" value="green" class="mr-1" checked> <span class="text-riskGreen font-bold">穩定</span></label><label class="flex-1 cursor-pointer border p-2 rounded text-center hover:bg-yellow-50 bg-white text-sm"><input type="radio" name="risk" value="yellow" class="mr-1"> <span class="text-riskYellow font-bold">觀察</span></label><label class="flex-1 cursor-pointer border p-2 rounded text-center hover:bg-red-50 bg-white text-sm"><input type="radio" name="risk" value="red" class="mr-1"> <span class="text-riskRed font-bold">高險</span></label></div></div>
+                    </div>
+                    <div class="bg-white p-4 rounded border border-gray-200 shadow-sm" id="logFormContainer">
+                        <h5 class="font-bold text-gray-800 mb-3 border-b pb-1">新增/更新紀錄</h5>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3"><div><label class="text-xs text-gray-500">日期</label><input type="date" id="logDate" class="w-full border p-1 rounded text-sm" max="9999-12-31"></div><div><label class="text-xs text-gray-500">身高 (cm)</label><input type="number" step="0.1" id="logHeight" class="w-full border p-1 rounded text-sm"></div><div><label class="text-xs text-gray-500">體重 (kg)</label><input type="number" step="0.1" id="logWeight" class="w-full border p-1 rounded text-sm"></div></div>
+                        <div class="grid grid-cols-3 gap-3 mb-3"><div><label class="text-xs text-gray-500">推拿 (次)</label><input type="text" id="logMassage" class="w-full border p-1 rounded text-sm"></div><div><label class="text-xs text-gray-500">穴道 (次)</label><input type="text" id="logAcupoint" class="w-full border p-1 rounded text-sm"></div><div><label class="text-xs text-gray-500">運動 (次)</label><input type="text" id="logExercise" class="w-full border p-1 rounded text-sm"></div></div>
+                        <div class="mb-3"><label class="text-xs text-gray-500">本月管理狀況回報 (明細)</label><textarea id="logStatus" class="w-full border p-1 rounded text-sm h-16" placeholder="填寫本月狀況..."></textarea><textarea id="statusReport" class="hidden"></textarea></div>
+                        <button type="button" onclick="saveLogDirectly()" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 font-bold text-sm shadow"><i class="fa-solid fa-floppy-disk"></i> 新增並儲存紀錄</button>
+                    </div>
+                    <div class="bg-white rounded border border-gray-200 overflow-hidden">
+                        <div class="bg-gray-100 p-2 font-bold text-xs text-gray-600">歷史紀錄明細</div>
+                        <div id="logsHistoryTable" class="max-h-64 overflow-y-auto scrollbar-thin"></div>
                     </div>
                 </div>
 
                 <!-- Modal Footer (Sticky) -->
-                <div class="p-4 border-t border-gray-200 bg-gray-50 flex justify-end" id="modalFooterBtn">
-                    <button type="submit" class="bg-secondary text-black px-8 py-3 rounded-lg font-bold text-lg shadow-lg hover:opacity-90 w-full md:w-auto">儲存基本資料</button>
+                <div class="pt-4 border-t border-gray-100 flex justify-end sticky bottom-0 bg-white" id="modalFooterBtn">
+                    <button type="submit" class="bg-secondary text-black px-8 py-3 rounded-lg font-bold text-lg shadow-lg hover:opacity-90">儲存基本資料</button>
                 </div>
             </form>
         </div>
@@ -314,6 +296,8 @@
         const FAKE_DOMAIN = "@growth.system"; 
         let currentEditingFamily = null;
         let managerDirectorMap = {};
+        let undoTimeout = null;
+        let pendingUndoAction = null;
 
         function toggleDateReminder() {
             const isChecked = document.getElementById('isRenewal').checked;
@@ -374,6 +358,27 @@
 
         function logout() { auth.signOut(); location.reload(); }
 
+        function showUndoToast(message, undoCallback) {
+            const toast = document.getElementById('undoToast');
+            document.getElementById('undoMessage').innerText = message;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('show'), 10); 
+            pendingUndoAction = undoCallback;
+            if (undoTimeout) clearTimeout(undoTimeout);
+            undoTimeout = setTimeout(() => { closeToast(); }, 5000);
+        }
+
+        function closeToast() {
+            const toast = document.getElementById('undoToast');
+            toast.classList.remove('show');
+            setTimeout(() => toast.classList.add('hidden'), 300);
+            pendingUndoAction = null;
+        }
+
+        function executeUndo() {
+            if (pendingUndoAction) { pendingUndoAction(); closeToast(); }
+        }
+
         function getLatestLog(kid) {
             if (!kid.logs || kid.logs.length === 0) return null;
             const sorted = [...kid.logs].sort((a, b) => {
@@ -384,22 +389,66 @@
             return sorted[sorted.length - 1];
         }
 
+        // ★ V14.2 列表互動修復 ★
         function initManagerDashboard() {
             const container = document.getElementById('managerFamilyList');
             db.collection('families').where('managerId', '==', currentUser.uid).onSnapshot(snap => {
-                container.innerHTML = snap.empty ? '<div class="col-span-3 text-center bg-white p-10 rounded border text-gray-500 shadow">尚無資料，請點擊上方按鈕新增。</div>' : '';
+                const items = [];
                 snap.forEach(doc => {
                     const d = doc.data(); 
-                    const kidNames = d.kids.map(k => k.name).join(', ');
-                    const k1 = d.kids[0];
-                    const latest = getLatestLog(k1);
-                    const lastH = latest ? latest.height : k1.initialHeight;
-                    const lastDate = latest ? (latest.date || latest.month) : '無紀錄';
-                    const growth = (Number(lastH) - Number(k1.initialHeight)).toFixed(1);
-                    container.innerHTML += `<div class="bg-white p-4 rounded shadow border-t-4 border-primary hover:shadow-lg transition"><div class="flex justify-between font-bold text-lg text-gray-800"><h3>${d.parentName}</h3><span class="text-xs px-2 py-1 bg-gray-200 rounded">${d.nationality}</span></div><div class="text-sm mt-2 text-gray-700"><p><i class="fa-solid fa-child"></i> 孩童: ${kidNames}</p><p class="text-xs text-gray-500 mt-1">最新: ${lastDate} / 身高 ${lastH}cm</p></div><div class="text-xs text-gray-500 mt-2 bg-gray-50 p-2 rounded truncate"><i class="fa-solid fa-clipboard-list"></i> ${d.riskLevel === 'green' ? '穩定' : (d.riskLevel === 'yellow' ? '觀察' : '高風險')}</div><button onclick="openFamilyModal('${doc.id}')" class="w-full mt-3 bg-white border border-secondary text-black py-1 rounded hover:bg-secondary hover:text-white transition">編輯與紀錄</button></div>`;
+                    const kidNames = d.kids ? d.kids.map(k => k.name).join(', ') : '無孩童';
+                    const k1 = d.kids && d.kids.length > 0 ? d.kids[0] : null;
+                    let lastInfo = '無紀錄';
+                    let growthStr = '';
+                    
+                    if (k1) {
+                        const latest = getLatestLog(k1);
+                        const lastH = latest ? latest.height : k1.initialHeight;
+                        const lastDate = latest ? (latest.date || latest.month) : '初始';
+                        lastInfo = `最新: ${lastDate} / 身高 ${lastH}cm`;
+                        const growth = (Number(lastH) - Number(k1.initialHeight)).toFixed(1);
+                        growthStr = `<span class="text-green-600 font-bold">(+${growth})</span>`;
+                    }
+
+                    const riskClass = getRiskClass(d.riskLevel);
+                    const riskLabel = getRiskLabel(d.riskLevel);
+                    const borderClass = d.riskLevel === 'red' ? 'border-riskRed' : (d.riskLevel === 'yellow' ? 'border-riskYellow' : 'border-riskGreen');
+
+                    // ★ 關鍵修改：事件分流 ★
+                    items.push(`
+                        <div class="bg-white p-4 rounded shadow border-l-4 ${borderClass} hover:shadow-lg transition flex flex-col md:flex-row items-center justify-between gap-4 w-full relative">
+                            <!-- 左側點擊區域：打開紀錄 -->
+                            <div class="flex-grow w-full md:w-auto cursor-pointer" onclick="openFamilyModal('${doc.id}'); switchModalTab('records');">
+                                <div class="flex items-center flex-wrap gap-2 mb-1">
+                                    <h3 class="font-bold text-lg text-gray-800">${d.parentName}</h3>
+                                    <span class="text-xs px-2 py-1 bg-gray-100 rounded text-gray-600">${d.nationality}</span>
+                                    <span class="text-xs px-2 py-1 rounded font-bold ${riskClass}">${riskLabel}</span>
+                                </div>
+                                <div class="text-sm text-gray-600 flex flex-wrap gap-4 items-center">
+                                    <span><i class="fa-solid fa-child text-accent"></i> ${kidNames}</span>
+                                    <span class="text-gray-500">${lastInfo} ${growthStr}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- 右側操作區 -->
+                            <div class="flex items-center gap-3 w-full md:w-auto justify-end z-10">
+                                 <div class="text-xs text-gray-500 bg-gray-50 p-2 rounded truncate max-w-[150px] hidden lg:block border border-gray-100" title="${d.statusReport || ''}">
+                                    <i class="fa-solid fa-comment-dots"></i> ${d.statusReport || '無回報'}
+                                </div>
+                                <!-- 編輯按鈕：強制打開基本資料頁並阻止事件冒泡 -->
+                                <button onclick="event.stopPropagation(); openFamilyModal('${doc.id}'); switchModalTab('basic');" class="bg-white border border-secondary text-black px-4 py-2 rounded hover:bg-secondary hover:text-white transition text-sm font-bold whitespace-nowrap flex items-center gap-1">
+                                    <i class="fa-solid fa-pen-to-square"></i> 編輯資料
+                                </button>
+                            </div>
+                        </div>`);
                 });
+                
+                container.innerHTML = items.length > 0 ? items.join('') : '<div class="text-center bg-white p-10 rounded border text-gray-500 shadow w-full">尚無資料，請點擊上方按鈕新增。</div>';
             });
         }
+
+        // ... (Other functions remain unchanged from V13.1, omitted for brevity but included in full file) ...
+        // (Ensure all functions like openFamilyModal, saveFamily, renderKidLogs are present)
 
         function switchModalTab(tabName) {
             document.getElementById('content-basic').classList.toggle('hidden', tabName !== 'basic');
@@ -419,7 +468,6 @@
             }
         }
 
-        // ★ 修改：孩童欄位標記刪除 (防誤刪) ★
         function addKidField(data = null) {
             const container = document.getElementById('kidsContainer');
             const kidHtml = `<div class="grid grid-cols-1 md:grid-cols-6 gap-2 bg-white p-2 rounded border border-gray-200 mb-2 kid-entry items-end"><div class="md:col-span-1"><label class="text-[10px] text-gray-400">姓名</label><input type="text" class="kid-name w-full border p-1 text-sm rounded" value="${data ? data.name : ''}" required></div><div class="md:col-span-1"><label class="text-[10px] text-gray-400">生日</label><input type="date" class="kid-dob w-full border p-1 text-sm rounded" value="${data ? data.dob : ''}" max="9999-12-31" required></div><div class="md:col-span-1"><label class="text-[10px] text-gray-400">初始身高</label><input type="number" step="0.1" class="kid-h w-full border p-1 text-sm rounded" value="${data ? data.initialHeight : ''}" placeholder="cm" required></div><div class="md:col-span-1"><label class="text-[10px] text-gray-400">初始體重</label><input type="number" step="0.1" class="kid-w w-full border p-1 text-sm rounded" value="${data ? data.initialWeight : ''}" placeholder="kg" required></div><div class="md:col-span-1"><label class="text-[10px] text-gray-400">骨齡</label><input type="number" step="0.1" class="kid-bone w-full border p-1 text-sm rounded" value="${data ? data.boneAge || '' : ''}"></div><div class="md:col-span-1 text-right"><button type="button" onclick="removeKidField(this)" class="text-red-500 hover:text-red-700" title="刪除 (可復原)"><i class="fa-solid fa-trash"></i></button></div></div>`;
@@ -429,14 +477,12 @@
         function removeKidField(btn) {
             const row = btn.closest('.kid-entry');
             if (row.classList.contains('marked-for-deletion')) {
-                // 如果已經標記刪除，再次點擊則復原
                 row.classList.remove('marked-for-deletion');
                 btn.innerHTML = '<i class="fa-solid fa-trash"></i>';
                 btn.classList.replace('text-green-600', 'text-red-500');
             } else {
-                // 標記刪除
                 row.classList.add('marked-for-deletion');
-                btn.innerHTML = '<i class="fa-solid fa-rotate-left"></i>'; // 變為復原圖示
+                btn.innerHTML = '<i class="fa-solid fa-rotate-left"></i>';
                 btn.classList.replace('text-red-500', 'text-green-600');
             }
         }
@@ -487,7 +533,16 @@
                         const displayDate = l.date || l.month;
                         const originalIndex = logs.indexOf(l);
 
-                        html += `<tr class="border-b hover:bg-yellow-50"><td class="p-1">${displayDate}</td><td class="p-1 font-bold">${l.height} <span class="${hClass} text-[10px]">(${diffH>0?'+':''}${diffH})</span></td><td class="p-1">${l.weight} <span class="${wClass} text-[10px]">(${diffW>0?'+':''}${diffW})</span></td><td class="p-1 truncate max-w-[100px]">${l.statusReport||'-'}</td><td class="p-1 flex gap-1"><button type="button" onclick="editLog(${originalIndex})" class="text-blue-500 hover:text-blue-700"><i class="fa-solid fa-pen"></i></button><button type="button" onclick="deleteLog(${originalIndex})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`;
+                        html += `<tr class="border-b hover:bg-yellow-50">
+                            <td class="p-1">${displayDate}</td>
+                            <td class="p-1 font-bold">${l.height} <span class="${hClass} text-[10px]">(${diffH>0?'+':''}${diffH})</span></td>
+                            <td class="p-1">${l.weight} <span class="${wClass} text-[10px]">(${diffW>0?'+':''}${diffW})</span></td>
+                            <td class="p-1 truncate max-w-[100px]">${l.statusReport||'-'}</td>
+                            <td class="p-1 flex gap-1">
+                                <button type="button" onclick="editLog(${originalIndex})" class="text-blue-500 hover:text-blue-700"><i class="fa-solid fa-pen"></i></button>
+                                <button type="button" onclick="deleteLog(${originalIndex})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>`;
                     }
                     html += '</tbody></table>';
                     table.innerHTML = html;
@@ -509,42 +564,20 @@
         }
 
         async function deleteLog(index) {
-            // 紀錄刪除改為：標記刪除 (不立即寫入) 或 立即寫入但提供復原?
-            // 為了簡單直覺，這裡採用立即寫入並提供復原
             const kidIdx = document.getElementById('recordKidSelect').value;
             const deletedLog = currentEditingFamily.kids[kidIdx].logs[index]; 
             currentEditingFamily.kids[kidIdx].logs.splice(index, 1);
             try {
                 await db.collection('families').doc(currentEditingFamily.id).update({ kids: currentEditingFamily.kids, updatedAt: new Date() });
                 renderKidLogs();
-                // 顯示復原 Toast
-                const toast = document.getElementById('undoToast');
-                document.getElementById('undoMessage').innerText = "已刪除紀錄";
-                toast.classList.remove('hidden');
-                setTimeout(() => toast.classList.add('show'), 10);
-                
-                // 設定復原動作
-                const restoreBtn = toast.querySelector('button'); // First button is restore
-                // 移除舊事件監聽器 (簡單暴力法：複製節點)
-                const newBtn = restoreBtn.cloneNode(true);
-                restoreBtn.parentNode.replaceChild(newBtn, restoreBtn);
-                
-                newBtn.onclick = async () => {
+                showUndoToast('已刪除一筆紀錄', async () => {
                     currentEditingFamily.kids[kidIdx].logs.push(deletedLog);
                     currentEditingFamily.kids[kidIdx].logs.sort((a,b) => (a.date||'').localeCompare(b.date||''));
                     await db.collection('families').doc(currentEditingFamily.id).update({ kids: currentEditingFamily.kids, updatedAt: new Date() });
                     renderKidLogs();
                     closeToast();
-                };
-
-                setTimeout(() => closeToast(), 5000);
+                });
             } catch(e) { alert("刪除失敗: " + e.message); }
-        }
-        
-        function closeToast() {
-            const toast = document.getElementById('undoToast');
-            toast.classList.remove('show');
-            setTimeout(() => toast.classList.add('hidden'), 300);
         }
 
         async function saveLogDirectly() {
@@ -561,6 +594,7 @@
                 recordedAt: new Date().toISOString()
             };
             if (!newLog.date || !newLog.height) { alert("日期與身高必填"); return; }
+
             if (!currentEditingFamily.kids[kidIdx].logs) currentEditingFamily.kids[kidIdx].logs = [];
             
             const existingIdx = currentEditingFamily.kids[kidIdx].logs.findIndex(l => l.date === newLog.date);
@@ -630,8 +664,7 @@
             if(addKidBtn) addKidBtn.style.display = isReadOnly ? 'none' : 'block';
             const logFormContainer = document.getElementById('logFormContainer');
             if(logFormContainer) logFormContainer.style.display = isReadOnly ? 'none' : 'block';
-            // 注意：這裡不隱藏標記刪除的按鈕，因為只是標記
-            // document.querySelectorAll('.kid-entry button').forEach(btn => btn.style.display = isReadOnly ? 'none' : 'block');
+            document.querySelectorAll('.kid-entry button').forEach(btn => btn.style.display = isReadOnly ? 'none' : 'block');
         }
         
         function closeFamilyModal() { document.getElementById('familyModal').classList.add('hidden'); closeToast(); }
@@ -648,7 +681,6 @@
                 isRenewal: document.getElementById('isRenewal').checked, 
                 updatedAt: new Date()
             };
-            // ★ 修改：過濾掉被標記為 deleted 的孩童 ★
             const kidDivs = document.querySelectorAll('.kid-entry:not(.marked-for-deletion)');
             const kidsData = [];
             kidDivs.forEach((div, idx) => {
@@ -820,25 +852,38 @@
         function filterOwnerTable(type, val, families) {
             const tbody = document.getElementById('ownerFamilyTable'); tbody.innerHTML = '';
             let filtered = families || window.currentFamilies || [];
+            
+            // 篩選邏輯 (V13.2)
             if (type === 'risk') filtered = filtered.filter(f => f.riskLevel === 'red');
             if (type === 'nation') filtered = filtered.filter(f => f.nationality === val);
+            if (type === 'search') {
+                const term = document.getElementById('familySearch').value.toLowerCase();
+                filtered = filtered.filter(f => {
+                    const parent = f.parentName.toLowerCase();
+                    const nation = f.nationality.toLowerCase();
+                    const kidNames = f.kids ? f.kids.map(k => k.name.toLowerCase()).join(' ') : '';
+                    return parent.includes(term) || nation.includes(term) || kidNames.includes(term);
+                });
+            }
+
             filtered.forEach(f => {
                 const k = f.kids[0]; 
                 const latest = getLatestLog(k);
                 const currentH = latest ? latest.height : k.initialHeight;
                 const grow = (Number(currentH) - Number(k.initialHeight)).toFixed(1);
                 const directorName = (f.managerId && managerDirectorMap[f.managerId]) ? managerDirectorMap[f.managerId] : '-';
-                tbody.innerHTML += `<tr class="hover:bg-gray-50 transition border-b border-gray-100"><td class="p-3 font-bold text-gray-600">${f.nationality}</td><td class="p-3"><div class="font-bold text-gray-800">${k.name}</div><div class="text-xs text-gray-400">${k.dob}</div></td><td class="p-3"><div>${currentH} cm</div><div class="text-xs text-riskGreen font-bold">+${grow} cm</div></td><td class="p-3 text-sm text-gray-600">${f.managerName}</td><td class="p-3 text-sm text-primary font-bold">${directorName}</td><td class="p-3 text-center"><span class="risk-dot ${getRiskDotClass(f.riskLevel)}"></span></td><td class="p-3 text-center"><button onclick="openFamilyModal('${f.id}')" class="bg-secondary text-black px-3 py-1 rounded text-xs hover:opacity-80 transition font-bold">查看</button></td></tr>`;
+
+                tbody.innerHTML += `<tr class="hover:bg-gray-50 transition border-b border-gray-100"><td class="p-3 font-bold text-gray-600">${f.nationality}</td><td class="p-3 font-bold text-gray-800">${f.parentName}</td><td class="p-3"><div class="font-bold text-gray-800">${k.name}</div><div class="text-xs text-gray-400">${k.dob}</div></td><td class="p-3"><div>${currentH} cm</div><div class="text-xs text-riskGreen font-bold">+${grow} cm</div></td><td class="p-3 text-sm text-gray-600">${f.managerName}</td><td class="p-3 text-sm text-primary font-bold">${directorName}</td><td class="p-3 text-center"><span class="risk-dot ${getRiskDotClass(f.riskLevel)}"></span></td><td class="p-3 text-center"><button onclick="openFamilyModal('${f.id}')" class="bg-secondary text-black px-3 py-1 rounded text-xs hover:opacity-80 transition font-bold">查看</button></td></tr>`;
             });
         }
         // ... (Director Logic & Utils same as before)
         async function initDirectorDashboard() { /* Same logic */ 
             log("初始化班主任儀表板...");
 
-            // 1. Personal Caseload
+            // 1. Personal Caseload (Updated for horizontal layout in V14.2)
             const myContainer = document.getElementById('directorMyFamilyList');
             db.collection('families').where('managerId', '==', currentUser.uid).onSnapshot(snap => {
-                myContainer.innerHTML = snap.empty ? '<div class="col-span-3 text-center bg-white p-6 rounded border text-gray-500">您目前沒有親自管理的家庭</div>' : '';
+                const items = [];
                 snap.forEach(doc => {
                     const d = doc.data();
                     const kidNames = d.kids.map(k => k.name).join(', ');
@@ -846,8 +891,32 @@
                     const latest = getLatestLog(k1);
                     const lastH = latest ? latest.height : k1.initialHeight;
                     const lastDate = latest ? (latest.date || latest.month) : '無紀錄';
-                    myContainer.innerHTML += `<div class="bg-white p-4 rounded shadow border-t-4 border-primary hover:shadow-lg transition"><div class="flex justify-between font-bold text-lg text-gray-800"><h3>${d.parentName}</h3><span class="text-xs px-2 py-1 bg-gray-200 rounded">${d.nationality}</span></div><div class="text-sm mt-2 text-gray-700"><p><i class="fa-solid fa-child"></i> 孩童: ${kidNames}</p><p class="text-xs text-gray-500 mt-1">最新: ${lastDate} / 身高 ${lastH}cm</p></div><div class="text-xs text-gray-500 mt-2 bg-gray-50 p-2 rounded truncate"><i class="fa-solid fa-clipboard-list"></i> ${d.riskLevel === 'green' ? '穩定' : '需注意'}</div><button onclick="openFamilyModal('${doc.id}')" class="w-full mt-3 bg-white border border-secondary text-black py-1 rounded hover:bg-secondary hover:text-white transition">編輯與紀錄</button></div>`;
+                    const growth = (Number(lastH) - Number(k1.initialHeight)).toFixed(1);
+                    const riskClass = getRiskClass(d.riskLevel);
+                    const riskLabel = getRiskLabel(d.riskLevel);
+                    const borderClass = d.riskLevel === 'red' ? 'border-riskRed' : (d.riskLevel === 'yellow' ? 'border-riskYellow' : 'border-riskGreen');
+
+                    items.push(`
+                        <div class="bg-white p-4 rounded shadow border-l-4 ${borderClass} hover:shadow-lg transition flex flex-col md:flex-row items-center justify-between gap-4 w-full relative">
+                            <div class="flex-grow w-full md:w-auto cursor-pointer" onclick="openFamilyModal('${doc.id}'); switchModalTab('records');">
+                                <div class="flex items-center flex-wrap gap-2 mb-1">
+                                    <h3 class="font-bold text-lg text-gray-800">${d.parentName}</h3>
+                                    <span class="text-xs px-2 py-1 bg-gray-100 rounded text-gray-600">${d.nationality}</span>
+                                    <span class="text-xs px-2 py-1 rounded font-bold ${riskClass}">${riskLabel}</span>
+                                </div>
+                                <div class="text-sm text-gray-600 flex flex-wrap gap-4 items-center">
+                                    <span><i class="fa-solid fa-child text-accent"></i> ${kidNames}</span>
+                                    <span class="text-gray-500">最新: ${lastDate} / 身高 ${lastH}cm <span class="text-green-600">(+${growth})</span></span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 w-full md:w-auto justify-end z-10">
+                                <button onclick="event.stopPropagation(); openFamilyModal('${doc.id}'); switchModalTab('basic');" class="bg-white border border-secondary text-black px-4 py-2 rounded hover:bg-secondary hover:text-white transition text-sm font-bold whitespace-nowrap flex items-center gap-1">
+                                    <i class="fa-solid fa-pen-to-square"></i> 編輯資料
+                                </button>
+                            </div>
+                        </div>`);
                 });
+                myContainer.innerHTML = items.length > 0 ? items.join('') : '<div class="text-center bg-white p-6 rounded border text-gray-500">您目前沒有親自管理的家庭</div>';
             });
 
             // 2. Supervision
