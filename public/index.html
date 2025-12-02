@@ -35,7 +35,6 @@
         .scrollbar-thin::-webkit-scrollbar-track { background: #f1f1f1; }
         .scrollbar-thin::-webkit-scrollbar-thumb { background: #FFB74D; border-radius: 3px; }
 
-        /* 診斷視窗樣式 */
         #debugConsole {
             position: fixed; bottom: 0; left: 0; width: 100%; height: 150px;
             background: #1a1a1a; color: #0f0; font-family: monospace; font-size: 12px;
@@ -45,71 +44,51 @@
         .log-err { color: #ff5555; font-weight: bold; }
         .log-warn { color: #ffcc00; }
         .log-info { color: #00ff00; }
-
-        /* 復原提示框 (Toast) 動畫 */
-        #undoToast {
-            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
-            transform: translateY(100%);
-            opacity: 0;
-        }
-        #undoToast.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-        /* 標記刪除樣式 */
+        
         .marked-for-deletion {
             background-color: #fee2e2 !important;
             opacity: 0.6;
             text-decoration: line-through;
             border: 1px dashed #ef4444 !important;
         }
-        .marked-for-deletion input {
-            pointer-events: none;
-            background-color: transparent;
+        .marked-for-deletion input { pointer-events: none; background-color: transparent; }
+        
+        #undoToast {
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+            transform: translateY(100%); opacity: 0;
         }
+        #undoToast.show { transform: translateY(0); opacity: 1; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <!-- 復原提示框 (Toast) -->
     <div id="undoToast" class="fixed bottom-40 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-2xl z-[9999] flex items-center gap-4 hidden">
         <span id="undoMessage">已刪除</span>
-        <button onclick="executeUndo()" class="bg-yellow-500 text-black px-3 py-1 rounded font-bold hover:bg-yellow-400 transition">
-            <i class="fa-solid fa-rotate-left"></i> 復原
-        </button>
+        <button onclick="executeUndo()" class="bg-yellow-500 text-black px-3 py-1 rounded font-bold hover:bg-yellow-400 transition"><i class="fa-solid fa-rotate-left"></i> 復原</button>
         <button onclick="closeToast()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-times"></i></button>
     </div>
 
-    <!-- 診斷日誌視窗 -->
     <div id="debugConsole">
         <div style="border-bottom:1px solid #444; margin-bottom:5px; padding-bottom:5px; font-weight:bold; color:#fff; display:flex; justify-content:space-between;">
             <span>🛠️ 系統診斷日誌</span>
-            <button onclick="document.getElementById('debugConsole').style.display='none'" class="text-gray-400 hover:text-white">[關閉]</button>
+            <div>
+                <button onclick="testAlertSystem()" class="text-yellow-300 hover:text-yellow-100 mr-3 border border-yellow-600 px-2 rounded text-xs">⚡ 測試警示切換</button>
+                <button onclick="document.getElementById('debugConsole').style.display='none'" class="text-gray-400 hover:text-white">[關閉]</button>
+            </div>
         </div>
         <div id="logContent"></div>
     </div>
 
-    <!-- 導航列 -->
     <nav class="bg-secondary text-gray-800 p-4 shadow-md flex justify-between items-center sticky top-0 z-40">
-        <div class="flex items-center gap-2">
-            <i class="fa-solid fa-sun text-yellow-600 text-xl animate-pulse"></i>
-            <h1 class="text-xl font-bold tracking-wide">兒童生長管理系統</h1>
-        </div>
+        <div class="flex items-center gap-2"><i class="fa-solid fa-sun text-yellow-600 text-xl animate-pulse"></i><h1 class="text-xl font-bold tracking-wide">兒童生長管理系統</h1></div>
         <div id="navUser" class="hidden flex items-center gap-3">
-            <div class="text-right leading-tight">
-                <span id="userRoleDisplay" class="block text-xs bg-primary text-white px-1 rounded inline-block mb-1"></span>
-                <span id="userNameDisplay" class="text-sm font-bold"></span>
-            </div>
-            <button onclick="logout()" class="bg-white text-gray-800 px-3 py-2 rounded hover:bg-gray-100 transition text-sm font-bold border border-gray-400">
-                <i class="fa-solid fa-sign-out-alt"></i> 登出
-            </button>
+            <div class="text-right leading-tight"><span id="userRoleDisplay" class="block text-xs bg-primary text-white px-1 rounded inline-block mb-1"></span><span id="userNameDisplay" class="text-sm font-bold"></span></div>
+            <button onclick="logout()" class="bg-white text-gray-800 px-3 py-2 rounded hover:bg-gray-100 transition text-sm font-bold border border-gray-400"><i class="fa-solid fa-sign-out-alt"></i> 登出</button>
         </div>
     </nav>
 
-    <!-- 主要內容區 -->
     <main class="flex-grow p-4 md:p-6 max-w-7xl mx-auto w-full">
         
-        <!-- Login Section -->
         <div id="authSection" class="max-w-md mx-auto bg-card p-0 rounded-xl shadow-xl mt-10 overflow-hidden border border-gray-300">
             <div class="flex bg-white border-b">
                 <button onclick="switchAuthTab('login')" id="tab-login" class="tab-btn active flex-1 py-4 text-center transition">登入系統</button>
@@ -132,43 +111,75 @@
             </div>
         </div>
 
-        <!-- 1. 老闆儀表板 (Owner) -->
+        <!-- 1. 老闆儀表板 -->
         <div id="ownerDashboard" class="hidden space-y-6 animate-fade-in">
-            <div class="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+            
+            <!-- 第一行：標題 -->
+            <div class="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-4">
                 <h2 class="text-xl font-bold text-gray-800"><i class="fa-solid fa-crown text-yellow-500 mr-2"></i>老闆儀表板</h2>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            
+            <!-- 第二行：數據卡片區 (3張卡片：總數、風險、壽星) - 移除生長停滯卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="bg-white p-5 rounded-lg shadow border-l-4 border-secondary"><h3 class="text-gray-500 text-sm font-bold">總家庭數</h3><p class="text-4xl font-bold text-gray-800 mt-2" id="ownerTotalFamilies">0</p></div>
                 <div class="bg-white p-5 rounded-lg shadow border-l-4 border-riskRed"><h3 class="text-gray-500 text-sm font-bold">高風險家庭</h3><p class="text-4xl font-bold text-riskRed mt-2" id="ownerRiskCount">0</p></div>
-                <div class="bg-white p-5 rounded-lg shadow border-l-4 border-riskGreen"><h3 class="text-gray-500 text-sm font-bold">全體平均長高</h3><p class="text-4xl font-bold text-riskGreen mt-2" id="ownerAvgGrowth">0 <span class="text-sm text-gray-400">cm</span></p></div>
-                 <div class="bg-white p-5 rounded-lg shadow border-l-4 border-primary relative"><h3 class="text-gray-500 text-sm font-bold">當月壽星</h3><p class="text-4xl font-bold text-primary mt-2" id="ownerBirthdayCount">0</p><div id="ownerBirthdayList" class="mt-2 text-sm text-gray-800 font-bold bg-yellow-50 p-1 rounded h-16 overflow-y-auto scrollbar-thin border border-yellow-100">無</div></div>
+                <!-- 壽星卡片 -->
+                <div class="bg-white p-5 rounded-lg shadow border-l-4 border-primary relative">
+                    <h3 class="text-gray-500 text-sm font-bold">當月壽星</h3>
+                    <p class="text-4xl font-bold text-primary mt-2" id="ownerBirthdayCount">0</p>
+                    <div id="ownerBirthdayList" class="mt-2 text-sm text-gray-800 font-bold bg-yellow-50 p-1 rounded h-12 overflow-y-auto scrollbar-thin border border-yellow-100">無</div>
+                </div>
             </div>
+            
+            <!-- 第三行：健康監測看板 (僅在有警示時顯示紅色列表) -->
+            <div id="ownerHealthBoard" class="mb-6 p-4 rounded shadow-sm border-l-4 border-red-500 bg-red-50 hidden">
+                <div class="flex items-center">
+                    <div id="ownerHealthIcon" class="flex-shrink-0 text-2xl text-red-600"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="ml-4 w-full">
+                        <h3 id="ownerHealthTitle" class="text-lg font-bold text-red-800">警示：發現生長停滯個案</h3>
+                        <div id="ownerStagnantList" class="text-sm mt-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1 text-red-700 font-bold">
+                            <!-- 動態插入停滯名單 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="bg-white p-6 rounded-lg shadow border border-gray-200"><h3 class="text-lg font-bold mb-4 text-gray-800 border-b pb-2"><i class="fa-solid fa-chart-column mr-2"></i> 各管理師-管理家庭平均身高</h3><div class="relative h-64"><canvas id="managerChart"></canvas></div></div>
                 <div class="bg-white p-6 rounded-lg shadow border border-gray-200"><h3 class="text-lg font-bold mb-4 text-gray-800 border-b pb-2"><i class="fa-solid fa-chart-line mr-2"></i> 各國籍-平均生長幅度</h3><div class="relative h-64"><canvas id="nationChart"></canvas></div></div>
             </div>
             <div class="bg-white p-6 rounded-lg shadow border border-gray-200">
-                <h3 class="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2"><i class="fa-solid fa-list"></i> 全機構家庭明細</h3>
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+                    <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i class="fa-solid fa-list"></i> 全機構家庭明細</h3>
+                    <div class="w-full md:w-auto"><input type="text" id="familySearch" placeholder="🔍 搜尋家長、孩童、國籍..." class="border p-2 rounded text-sm w-full md:w-64 focus:outline-none focus:border-primary shadow-inner" oninput="filterOwnerTable('search')"></div>
+                </div>
                 <div class="flex gap-2 mb-4 overflow-x-auto pb-2">
                     <button onclick="filterOwnerTable('all')" class="bg-secondary text-black px-3 py-1 rounded text-sm whitespace-nowrap">全部</button>
                     <button onclick="filterOwnerTable('risk')" class="bg-riskRed text-white px-3 py-1 rounded text-sm whitespace-nowrap">高風險</button>
                     <div id="nationFilters" class="flex gap-2"></div>
                 </div>
-                <div class="overflow-x-auto rounded-lg border border-gray-200"><table class="w-full text-left border-collapse"><thead><tr class="bg-gray-100 text-gray-700 text-sm"><th class="p-3">國籍</th><th class="p-3">孩童/生日</th><th class="p-3">生長數據</th><th class="p-3">負責管理師</th><th class="p-3 text-primary">負責班主任</th><th class="p-3 text-center">風險</th><th class="p-3 text-center">操作</th></tr></thead><tbody id="ownerFamilyTable" class="text-sm bg-white divide-y divide-gray-100 text-gray-800"></tbody></table></div>
+                <div class="overflow-x-auto rounded-lg border border-gray-200"><table class="w-full text-left border-collapse"><thead><tr class="bg-gray-100 text-gray-700 text-sm"><th class="p-3">國籍</th><th class="p-3">家長姓名</th><th class="p-3">孩童/生日</th><th class="p-3">生長數據</th><th class="p-3">負責管理師</th><th class="p-3 text-primary">負責班主任</th><th class="p-3 text-center">風險</th><th class="p-3 text-center">操作</th></tr></thead><tbody id="ownerFamilyTable" class="text-sm bg-white divide-y divide-gray-100 text-gray-800"></tbody></table></div>
             </div>
             <div class="bg-white p-6 rounded-lg shadow border border-gray-200"><h3 class="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2"><i class="fa-solid fa-users-gear"></i> 人員權限管理與班主任分配</h3><div id="staffList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div></div>
         </div>
 
-        <!-- 2. 班主任儀表板 (Director) -->
+        <!-- 2. 班主任儀表板 -->
         <div id="directorDashboard" class="hidden space-y-6">
+            
+            <!-- 班主任健康看板 -->
+            <div id="directorHealthBoard" class="mb-6 p-4 rounded shadow-sm border-l-4 border-red-500 bg-red-50 hidden">
+                <div class="flex items-center">
+                    <div id="directorHealthIcon" class="flex-shrink-0 text-2xl text-red-600"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="ml-4"><h3 id="directorHealthTitle" class="text-lg font-bold text-red-800">警示：發現生長停滯個案</h3><div id="directorStagnantList" class="text-sm mt-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1 text-red-700 font-bold"></div></div>
+                </div>
+            </div>
+
             <div class="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-4 border-l-4 border-primary">
                 <div><h2 class="text-2xl font-bold text-gray-800">我的管理家庭</h2><p class="text-gray-500 text-sm">親自負責的個案管理</p></div>
                 <button onclick="openFamilyModal()" class="bg-primary text-white px-5 py-2 rounded-full shadow hover:bg-orange-600 font-bold flex items-center gap-2"><i class="fa-solid fa-plus"></i> 新增家庭</button>
             </div>
             <div id="directorMyFamilyList" class="flex flex-col gap-3 mb-8"></div>
-
              <div class="bg-yellow-100 border-l-4 border-primary text-yellow-800 p-4 rounded shadow-sm"><p class="font-bold">班主任督導模式</p><p class="text-sm">僅供檢視旗下管理師績效與家庭狀況。</p></div>
-            
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="bg-white p-6 rounded-lg shadow h-fit border border-gray-200"><h3 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2">旗下管理師表現</h3><div id="directorTeamList" class="space-y-3"></div></div>
                 <div class="bg-white p-6 rounded-lg shadow border border-gray-200"><h3 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2">需關注家庭 (紅/黃燈)</h3><div id="directorRiskList" class="space-y-3 max-h-[500px] overflow-y-auto"></div></div>
@@ -176,87 +187,19 @@
             <div class="bg-white p-6 rounded-lg shadow border border-gray-200"><h3 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2">全機構家庭資料列表</h3><div class="overflow-x-auto"><table class="w-full text-left border-collapse"><thead><tr class="bg-gray-100 text-gray-700 text-sm"><th class="p-3">國籍</th><th class="p-3">孩童/生日</th><th class="p-3">生長數據</th><th class="p-3">負責人員</th><th class="p-3 text-center">風險</th><th class="p-3 text-center">操作</th></tr></thead><tbody id="directorFamilyTable" class="text-sm bg-white divide-y divide-gray-100 text-gray-800"></tbody></table></div></div>
         </div>
 
-        <!-- 3. 管理師儀表板 (Manager) -->
+        <!-- 3. 管理師儀表板 -->
         <div id="managerDashboard" class="hidden space-y-6 animate-fade-in">
             <div class="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-4">
                 <div><h2 class="text-2xl font-bold text-gray-800">我的家庭管理</h2><p class="text-gray-500 text-sm">管理與紀錄孩童生長曲線</p></div>
                 <button onclick="openFamilyModal()" class="bg-primary text-white px-5 py-2 rounded-full shadow hover:bg-orange-600 font-bold flex items-center gap-2"><i class="fa-solid fa-plus"></i> 新增家庭</button>
             </div>
-            <!-- 橫式列表容器 -->
             <div id="managerFamilyList" class="flex flex-col gap-3"></div>
         </div>
     </main>
 
-    <div id="familyModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-xl w-full max-w-4xl shadow-2xl relative max-h-[90vh] overflow-y-auto border-t-8 border-primary">
-            <!-- Modal Header -->
-            <div class="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
-                <h3 id="modalTitle" class="text-2xl font-bold text-gray-800">家庭資料</h3>
-                <button onclick="closeFamilyModal()" class="text-gray-400 hover:text-red-600 text-2xl"><i class="fa-solid fa-times"></i></button>
-            </div>
-            
-            <!-- Form -->
-            <form id="familyForm" onsubmit="saveFamily(event)" class="space-y-6 p-6">
-                <input type="hidden" id="familyId">
-                
-                <!-- Tabs -->
-                <div class="flex border-b border-gray-200 mb-4">
-                    <button type="button" onclick="switchModalTab('basic')" id="tab-basic" class="px-4 py-2 text-sm font-bold text-primary border-b-2 border-primary">基本資料</button>
-                    <button type="button" onclick="switchModalTab('records')" id="tab-records" class="px-4 py-2 text-sm font-bold text-gray-500 hover:text-primary">紀錄與追蹤</button>
-                </div>
-                
-                <!-- Content: Basic -->
-                <div id="content-basic" class="space-y-6">
-                    <div class="bg-gray-50 p-4 rounded border border-gray-200">
-                        <h4 class="font-bold text-gray-800 mb-3">家長資訊與合約狀態</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div><label class="block text-xs font-bold text-primary uppercase mb-1">家長姓名</label><input type="text" id="parentName" class="w-full border p-2 rounded" required></div>
-                            <div><label class="block text-xs font-bold text-primary uppercase mb-1">國籍</label><input type="text" id="nationality" class="w-full border p-2 rounded" placeholder="請填寫中文" required></div>
-                            <div>
-                                <label class="block text-xs font-bold text-primary uppercase mb-1">加入/續約日期</label>
-                                <input type="date" id="joinDate" class="w-full border p-2 rounded bg-white focus:bg-white transition" max="9999-12-31">
-                                <p id="dateReminder" class="text-xs text-red-500 mt-1 hidden font-bold animate-pulse"><i class="fa-solid fa-circle-exclamation"></i> 請重新設定日期！</p>
-                            </div>
-                        </div>
-                        <div class="mt-3"><label class="block text-xs font-bold text-primary uppercase mb-1">家庭狀況說明 (重點提醒)</label><textarea id="familyNote" class="w-full border p-2 rounded h-20 placeholder-gray-400 text-sm" placeholder="例如：家長工作忙碌，需晚上聯繫..."></textarea></div>
-                        <div class="mt-3"><label class="inline-flex items-center cursor-pointer"><input type="checkbox" id="isRenewal" class="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary" onchange="toggleDateReminder()"><span class="ml-2 text-sm font-bold text-gray-700">此為續約家庭</span></label></div>
-                    </div>
-                    <div class="bg-infoBlue p-4 rounded border border-infoDark">
-                        <div class="flex justify-between items-center mb-3">
-                            <h4 class="font-bold text-gray-800"><i class="fa-solid fa-baby"></i> 孩童資料</h4>
-                            <button type="button" onclick="addKidField()" id="btnAddKid" class="text-xs bg-white border border-infoDark text-infoDark px-2 py-1 rounded hover:bg-infoDark hover:text-white transition">+ 新增孩童</button>
-                        </div>
-                        <div id="kidsContainer" class="space-y-3"></div>
-                    </div>
-                </div>
+    <!-- Modal & Scripts remain same as V17.0 -->
+    <div id="familyModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4 backdrop-blur-sm"><div class="bg-white rounded-xl w-full max-w-4xl shadow-2xl relative max-h-[90vh] overflow-y-auto border-t-8 border-primary"><button onclick="closeFamilyModal()" class="absolute top-4 right-4 text-gray-400 hover:text-red-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-50"><i class="fa-solid fa-times text-xl"></i></button><div class="p-6 md:p-8"><h3 id="modalTitle" class="text-2xl font-bold mb-6 text-gray-800 border-b pb-2">家庭資料</h3><form id="familyForm" onsubmit="saveFamily(event)" class="space-y-6 p-6"><input type="hidden" id="familyId"><div class="flex border-b border-gray-200 mb-4"><button type="button" onclick="switchModalTab('basic')" id="tab-basic" class="px-4 py-2 text-sm font-bold text-primary border-b-2 border-primary">基本資料</button><button type="button" onclick="switchModalTab('records')" id="tab-records" class="px-4 py-2 text-sm font-bold text-gray-500 hover:text-primary">紀錄與追蹤</button></div><div id="content-basic" class="space-y-6"><div class="bg-gray-50 p-4 rounded border border-gray-200"><h4 class="font-bold text-gray-800 mb-3">家長資訊與合約狀態</h4><div class="grid grid-cols-1 md:grid-cols-3 gap-4"><div><label class="block text-xs font-bold text-primary uppercase mb-1">家長姓名</label><input type="text" id="parentName" class="w-full border p-2 rounded" required></div><div><label class="block text-xs font-bold text-primary uppercase mb-1">國籍</label><input type="text" id="nationality" class="w-full border p-2 rounded" placeholder="請填寫中文" required></div><div><label class="block text-xs font-bold text-primary uppercase mb-1">加入/續約日期</label><input type="date" id="joinDate" class="w-full border p-2 rounded bg-white focus:bg-white transition" max="9999-12-31"><p id="dateReminder" class="text-xs text-red-500 mt-1 hidden font-bold animate-pulse"><i class="fa-solid fa-circle-exclamation"></i> 請重新設定日期！</p></div></div><div class="mt-3"><label class="block text-xs font-bold text-primary uppercase mb-1">家庭狀況說明 (重點提醒)</label><textarea id="familyNote" class="w-full border p-2 rounded h-20 placeholder-gray-400 text-sm" placeholder="例如：家長工作忙碌，需晚上聯繫..."></textarea></div><div class="mt-3"><label class="inline-flex items-center cursor-pointer"><input type="checkbox" id="isRenewal" class="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary" onchange="toggleDateReminder()"><span class="ml-2 text-sm font-bold text-gray-700">此為續約家庭</span></label></div></div><div class="bg-infoBlue p-4 rounded border border-infoDark"><div class="flex justify-between items-center mb-3"><h4 class="font-bold text-gray-800"><i class="fa-solid fa-baby"></i> 孩童資料</h4><button type="button" onclick="addKidField()" id="btnAddKid" class="text-xs bg-white border border-infoDark text-infoDark px-2 py-1 rounded hover:bg-infoDark hover:text-white transition">+ 新增孩童</button></div><div id="kidsContainer" class="space-y-3"></div></div></div><div id="content-records" class="hidden space-y-6"><div class="bg-yellow-50 p-4 rounded border border-yellow-200 mb-4 flex flex-col md:flex-row gap-4 justify-between items-center"><div class="w-full md:w-1/2"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">選擇孩童</label><select id="recordKidSelect" class="w-full border p-2 rounded" onchange="renderKidLogs()"></select></div><div class="w-full md:w-1/2"><label class="block text-xs font-bold text-primary uppercase mb-1">本月評估風險</label><div class="flex gap-2"><label class="flex-1 cursor-pointer border p-2 rounded text-center hover:bg-green-50 bg-white text-sm"><input type="radio" name="risk" value="green" class="mr-1" checked> <span class="text-riskGreen font-bold">穩定</span></label><label class="flex-1 cursor-pointer border p-2 rounded text-center hover:bg-yellow-50 bg-white text-sm"><input type="radio" name="risk" value="yellow" class="mr-1"> <span class="text-riskYellow font-bold">觀察</span></label><label class="flex-1 cursor-pointer border p-2 rounded text-center hover:bg-red-50 bg-white text-sm"><input type="radio" name="risk" value="red" class="mr-1"> <span class="text-riskRed font-bold">高險</span></label></div></div></div><div class="bg-white p-4 rounded border border-gray-200 shadow-sm" id="logFormContainer"><h5 class="font-bold text-gray-800 mb-3 border-b pb-1">新增/更新紀錄</h5><div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3"><div><label class="text-xs text-gray-500">日期</label><input type="date" id="logDate" class="w-full border p-1 rounded text-sm" max="9999-12-31"></div><div><label class="text-xs text-gray-500">身高 (cm)</label><div class="flex items-center gap-1"><input type="number" step="0.1" id="logHeight" class="w-full border p-1 rounded text-sm"><span id="heightTrend" class="text-[10px] font-bold w-12"></span></div></div><div><label class="text-xs text-gray-500">體重 (kg)</label><div class="flex items-center gap-1"><input type="number" step="0.1" id="logWeight" class="w-full border p-1 rounded text-sm"><span id="weightTrend" class="text-[10px] font-bold w-12"></span></div></div></div><div class="grid grid-cols-3 gap-3 mb-3"><div><label class="text-xs text-gray-500">推拿 (次)</label><input type="text" id="logMassage" class="w-full border p-1 rounded text-sm"></div><div><label class="text-xs text-gray-500">穴道 (次)</label><input type="text" id="logAcupoint" class="w-full border p-1 rounded text-sm"></div><div><label class="text-xs text-gray-500">運動 (次)</label><input type="text" id="logExercise" class="w-full border p-1 rounded text-sm"></div></div><div class="mb-3"><label class="text-xs text-gray-500">本月管理狀況回報 (明細)</label><textarea id="logStatus" class="w-full border p-1 rounded text-sm h-16" placeholder="填寫本月狀況..."></textarea><textarea id="statusReport" class="hidden"></textarea></div><button type="button" onclick="saveLogDirectly()" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 font-bold text-sm shadow"><i class="fa-solid fa-floppy-disk"></i> 儲存紀錄</button></div><div class="bg-white rounded border border-gray-200 overflow-hidden"><div class="bg-gray-100 p-2 font-bold text-xs text-gray-600">歷史紀錄明細</div><div id="logsHistoryTable" class="max-h-64 overflow-y-auto scrollbar-thin"></div></div></div><div class="p-4 border-t border-gray-200 bg-gray-50 flex justify-end" id="modalFooterBtn"><button type="submit" class="bg-secondary text-black px-8 py-3 rounded-lg font-bold text-lg shadow-lg hover:opacity-90 w-full md:w-auto">儲存基本資料</button></div></form></div></div>
 
-                <!-- Content: Records -->
-                <div id="content-records" class="hidden space-y-6">
-                    <div class="bg-yellow-50 p-4 rounded border border-yellow-200 mb-4 flex flex-col md:flex-row gap-4 justify-between items-center">
-                        <div class="w-full md:w-1/2"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">選擇孩童</label><select id="recordKidSelect" class="w-full border p-2 rounded" onchange="renderKidLogs()"></select></div>
-                        <div class="w-full md:w-1/2"><label class="block text-xs font-bold text-primary uppercase mb-1">本月評估風險</label><div class="flex gap-2"><label class="flex-1 cursor-pointer border p-2 rounded text-center hover:bg-green-50 bg-white text-sm"><input type="radio" name="risk" value="green" class="mr-1" checked> <span class="text-riskGreen font-bold">穩定</span></label><label class="flex-1 cursor-pointer border p-2 rounded text-center hover:bg-yellow-50 bg-white text-sm"><input type="radio" name="risk" value="yellow" class="mr-1"> <span class="text-riskYellow font-bold">觀察</span></label><label class="flex-1 cursor-pointer border p-2 rounded text-center hover:bg-red-50 bg-white text-sm"><input type="radio" name="risk" value="red" class="mr-1"> <span class="text-riskRed font-bold">高險</span></label></div></div>
-                    </div>
-                    <div class="bg-white p-4 rounded border border-gray-200 shadow-sm" id="logFormContainer">
-                        <h5 class="font-bold text-gray-800 mb-3 border-b pb-1">新增/更新紀錄</h5>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3"><div><label class="text-xs text-gray-500">日期</label><input type="date" id="logDate" class="w-full border p-1 rounded text-sm" max="9999-12-31"></div><div><label class="text-xs text-gray-500">身高 (cm)</label><input type="number" step="0.1" id="logHeight" class="w-full border p-1 rounded text-sm"></div><div><label class="text-xs text-gray-500">體重 (kg)</label><input type="number" step="0.1" id="logWeight" class="w-full border p-1 rounded text-sm"></div></div>
-                        <div class="grid grid-cols-3 gap-3 mb-3"><div><label class="text-xs text-gray-500">推拿 (次)</label><input type="text" id="logMassage" class="w-full border p-1 rounded text-sm"></div><div><label class="text-xs text-gray-500">穴道 (次)</label><input type="text" id="logAcupoint" class="w-full border p-1 rounded text-sm"></div><div><label class="text-xs text-gray-500">運動 (次)</label><input type="text" id="logExercise" class="w-full border p-1 rounded text-sm"></div></div>
-                        <div class="mb-3"><label class="text-xs text-gray-500">本月管理狀況回報 (明細)</label><textarea id="logStatus" class="w-full border p-1 rounded text-sm h-16" placeholder="填寫本月狀況..."></textarea><textarea id="statusReport" class="hidden"></textarea></div>
-                        <button type="button" onclick="saveLogDirectly()" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 font-bold text-sm shadow"><i class="fa-solid fa-floppy-disk"></i> 新增並儲存紀錄</button>
-                    </div>
-                    <div class="bg-white rounded border border-gray-200 overflow-hidden">
-                        <div class="bg-gray-100 p-2 font-bold text-xs text-gray-600">歷史紀錄明細</div>
-                        <div id="logsHistoryTable" class="max-h-64 overflow-y-auto scrollbar-thin"></div>
-                    </div>
-                </div>
-
-                <!-- Modal Footer (Sticky) -->
-                <div class="pt-4 border-t border-gray-100 flex justify-end sticky bottom-0 bg-white" id="modalFooterBtn">
-                    <button type="submit" class="bg-secondary text-black px-8 py-3 rounded-lg font-bold text-lg shadow-lg hover:opacity-90">儲存基本資料</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    
     <div id="transferModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4 backdrop-blur-sm"><div class="bg-white rounded-xl w-full max-w-md shadow-2xl p-6 border-t-8 border-infoDark"><h3 id="transferModalTitle" class="text-xl font-bold mb-4 text-gray-800">移交家庭</h3><div class="mb-6"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">新負責人</label><select id="targetManagerSelect" class="w-full border p-3 rounded bg-infoBlue focus:bg-white outline-none text-black"></select></div><div class="flex justify-end gap-3"><button onclick="document.getElementById('transferModal').classList.add('hidden')" class="px-4 py-2 text-gray-500 hover:text-gray-700 font-bold">取消</button><button onclick="confirmTransfer()" class="px-4 py-2 bg-infoDark text-white rounded hover:bg-blue-700 font-bold shadow">確認移交</button></div></div></div>
 
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -264,285 +207,62 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
     <script>
-        function log(msg, type='info') {
-            const box = document.getElementById('logContent');
-            if(!box) return;
-            const time = new Date().toLocaleTimeString();
-            const colorClass = type === 'error' ? 'log-err' : (type === 'warn' ? 'log-warn' : 'log-info');
-            box.innerHTML += `<div class="${colorClass}">[${time}] ${msg}</div>`;
-            document.getElementById('debugConsole').scrollTop = document.getElementById('debugConsole').scrollHeight;
-            console.log(`[${type}] ${msg}`);
-        }
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyBS8RCrZArtOLddiTSK8zt5VD2ODuYxLoA", 
-            authDomain: "j-growth-app-new.firebaseapp.com",
-            projectId: "j-growth-app-new",
-            storageBucket: "j-growth-app-new.appspot.com",
-            messagingSenderId: "573660567724",
-            appId: "1:573660567724:web:f8464351a96e276112a709",
-            measurementId: "G-TBE5PXCXWT"
-        };
-
+        function log(msg, type='info') { const box = document.getElementById('logContent'); if(!box) return; const time = new Date().toLocaleTimeString(); const colorClass = type === 'error' ? 'log-err' : (type === 'warn' ? 'log-warn' : 'log-info'); box.innerHTML += `<div class="${colorClass}">[${time}] ${msg}</div>`; document.getElementById('debugConsole').scrollTop = document.getElementById('debugConsole').scrollHeight; console.log(`[${type}] ${msg}`); }
+        const firebaseConfig = { apiKey: "AIzaSyBS8RCrZArtOLddiTSK8zt5VD2ODuYxLoA", authDomain: "j-growth-app-new.firebaseapp.com", projectId: "j-growth-app-new", storageBucket: "j-growth-app-new.appspot.com", messagingSenderId: "573660567724", appId: "1:573660567724:web:f8464351a96e276112a709", measurementId: "G-TBE5PXCXWT" };
         let app, auth, db;
-        try {
-            app = firebase.initializeApp(firebaseConfig);
-            auth = firebase.auth();
-            db = firebase.firestore();
-            log("Firebase 初始化成功！", "info");
-        } catch (e) { log("Firebase 初始化失敗: " + e.message, "error"); }
-
-        let currentUser = null, userData = null, allStaffCache = [];
-        const FAKE_DOMAIN = "@growth.system"; 
-        let currentEditingFamily = null;
-        let managerDirectorMap = {};
-        let undoTimeout = null;
-        let pendingUndoAction = null;
-
-        function toggleDateReminder() {
-            const isChecked = document.getElementById('isRenewal').checked;
-            const reminder = document.getElementById('dateReminder');
-            if (isChecked) {
-                reminder.classList.remove('hidden');
-            } else {
-                reminder.classList.add('hidden');
-            }
-        }
-
-        function switchAuthTab(tab) {
-            document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
-            document.getElementById('registerForm').classList.toggle('hidden', tab !== 'register');
-            document.getElementById('tab-login').classList.toggle('active', tab === 'login');
-            document.getElementById('tab-register').classList.toggle('active', tab === 'register');
-        }
-
-        async function handleAuth(e, type) {
-            e.preventDefault();
-            try {
-                if (type === 'login') {
-                    await auth.signInWithEmailAndPassword(document.getElementById('loginId').value.trim() + FAKE_DOMAIN, document.getElementById('loginPwd').value);
-                } else {
-                    const cred = await auth.createUserWithEmailAndPassword(document.getElementById('regId').value.trim() + FAKE_DOMAIN, document.getElementById('regPwd').value);
-                    const usersSnap = await db.collection('users').get();
-                    await db.collection('users').doc(cred.user.uid).set({
-                        name: document.getElementById('regName').value.trim(), username: document.getElementById('regId').value.trim(),
-                        role: usersSnap.empty ? 'owner' : 'manager', createdAt: new Date()
-                    });
-                    alert('註冊成功');
-                }
-            } catch (err) { alert("錯誤: " + err.message); }
-        }
-
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                try {
-                    const doc = await db.collection('users').doc(user.uid).get();
-                    if (doc.exists) {
-                        userData = doc.data(); currentUser = user;
-                        document.getElementById('authSection').classList.add('hidden');
-                        document.getElementById('navUser').classList.remove('hidden'); 
-                        document.getElementById('navUser').classList.add('flex'); 
-                        document.getElementById('userRoleDisplay').innerText = userData.role === 'owner' ? '老闆' : (userData.role === 'director' ? '班主任' : '管理師');
-                        document.getElementById('userNameDisplay').innerText = userData.name;
-                        if (userData.role === 'owner') { initOwnerDashboard(); document.getElementById('ownerDashboard').classList.remove('hidden'); }
-                        else if (userData.role === 'director') { initDirectorDashboard(); document.getElementById('directorDashboard').classList.remove('hidden'); }
-                        else { initManagerDashboard(); document.getElementById('managerDashboard').classList.remove('hidden'); }
-                    } else { alert("查無使用者資料"); auth.signOut(); }
-                } catch (error) { auth.signOut(); }
-            } else {
-                document.getElementById('authSection').classList.remove('hidden');
-                document.getElementById('navUser').classList.add('hidden');
-                ['ownerDashboard','directorDashboard','managerDashboard'].forEach(id => document.getElementById(id).classList.add('hidden'));
-            }
-        });
-
+        try { app = firebase.initializeApp(firebaseConfig); auth = firebase.auth(); db = firebase.firestore(); log("Firebase 初始化成功！", "info"); } catch (e) { log("Firebase 初始化失敗: " + e.message, "error"); }
+        let currentUser = null, userData = null, allStaffCache = []; const FAKE_DOMAIN = "@growth.system"; let currentEditingFamily = null; let managerDirectorMap = {}; let undoTimeout = null; let pendingUndoAction = null;
+        
+        function toggleDateReminder() { const isChecked = document.getElementById('isRenewal').checked; const reminder = document.getElementById('dateReminder'); if (isChecked) reminder.classList.remove('hidden'); else reminder.classList.add('hidden'); }
+        function switchAuthTab(tab) { document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login'); document.getElementById('registerForm').classList.toggle('hidden', tab !== 'register'); document.getElementById('tab-login').classList.toggle('active', tab === 'login'); document.getElementById('tab-register').classList.toggle('active', tab === 'register'); }
+        async function handleAuth(e, type) { e.preventDefault(); try { if (type === 'login') { await auth.signInWithEmailAndPassword(document.getElementById('loginId').value.trim() + FAKE_DOMAIN, document.getElementById('loginPwd').value); } else { const cred = await auth.createUserWithEmailAndPassword(document.getElementById('regId').value.trim() + FAKE_DOMAIN, document.getElementById('regPwd').value); const usersSnap = await db.collection('users').get(); await db.collection('users').doc(cred.user.uid).set({ name: document.getElementById('regName').value.trim(), username: document.getElementById('regId').value.trim(), role: usersSnap.empty ? 'owner' : 'manager', createdAt: new Date() }); alert('註冊成功'); } } catch (err) { alert("錯誤: " + err.message); } }
+        auth.onAuthStateChanged(async (user) => { if (user) { try { const doc = await db.collection('users').doc(user.uid).get(); if (doc.exists) { userData = doc.data(); currentUser = user; document.getElementById('authSection').classList.add('hidden'); document.getElementById('navUser').classList.remove('hidden'); document.getElementById('navUser').classList.add('flex'); document.getElementById('userRoleDisplay').innerText = userData.role === 'owner' ? '老闆' : (userData.role === 'director' ? '班主任' : '管理師'); document.getElementById('userNameDisplay').innerText = userData.name; if (userData.role === 'owner') { initOwnerDashboard(); document.getElementById('ownerDashboard').classList.remove('hidden'); } else if (userData.role === 'director') { initDirectorDashboard(); document.getElementById('directorDashboard').classList.remove('hidden'); } else { initManagerDashboard(); document.getElementById('managerDashboard').classList.remove('hidden'); } } else { alert("查無使用者資料"); auth.signOut(); } } catch (error) { auth.signOut(); } } else { document.getElementById('authSection').classList.remove('hidden'); document.getElementById('navUser').classList.add('hidden'); ['ownerDashboard','directorDashboard','managerDashboard'].forEach(id => document.getElementById(id).classList.add('hidden')); } });
         function logout() { auth.signOut(); location.reload(); }
-
-        function showUndoToast(message, undoCallback) {
-            const toast = document.getElementById('undoToast');
-            document.getElementById('undoMessage').innerText = message;
-            toast.classList.remove('hidden');
-            setTimeout(() => toast.classList.add('show'), 10); 
-            pendingUndoAction = undoCallback;
-            if (undoTimeout) clearTimeout(undoTimeout);
-            undoTimeout = setTimeout(() => { closeToast(); }, 5000);
-        }
-
-        function closeToast() {
-            const toast = document.getElementById('undoToast');
-            toast.classList.remove('show');
-            setTimeout(() => toast.classList.add('hidden'), 300);
-            pendingUndoAction = null;
-        }
-
-        function executeUndo() {
-            if (pendingUndoAction) { pendingUndoAction(); closeToast(); }
-        }
-
-        function getLatestLog(kid) {
-            if (!kid.logs || kid.logs.length === 0) return null;
-            const sorted = [...kid.logs].sort((a, b) => {
-                const da = a.date || a.month || '';
-                const db = b.date || b.month || '';
-                return da.localeCompare(db);
-            });
-            return sorted[sorted.length - 1];
-        }
-
-        // ★ V14.2 列表互動修復 ★
-        function initManagerDashboard() {
-            const container = document.getElementById('managerFamilyList');
-            db.collection('families').where('managerId', '==', currentUser.uid).onSnapshot(snap => {
-                const items = [];
-                snap.forEach(doc => {
-                    const d = doc.data(); 
-                    const kidNames = d.kids ? d.kids.map(k => k.name).join(', ') : '無孩童';
-                    const k1 = d.kids && d.kids.length > 0 ? d.kids[0] : null;
-                    let lastInfo = '無紀錄';
-                    let growthStr = '';
-                    
-                    if (k1) {
-                        const latest = getLatestLog(k1);
-                        const lastH = latest ? latest.height : k1.initialHeight;
-                        const lastDate = latest ? (latest.date || latest.month) : '初始';
-                        lastInfo = `最新: ${lastDate} / 身高 ${lastH}cm`;
-                        const growth = (Number(lastH) - Number(k1.initialHeight)).toFixed(1);
-                        growthStr = `<span class="text-green-600 font-bold">(+${growth})</span>`;
-                    }
-
-                    const riskClass = getRiskClass(d.riskLevel);
-                    const riskLabel = getRiskLabel(d.riskLevel);
-                    const borderClass = d.riskLevel === 'red' ? 'border-riskRed' : (d.riskLevel === 'yellow' ? 'border-riskYellow' : 'border-riskGreen');
-
-                    // ★ 關鍵修改：事件分流 ★
-                    items.push(`
-                        <div class="bg-white p-4 rounded shadow border-l-4 ${borderClass} hover:shadow-lg transition flex flex-col md:flex-row items-center justify-between gap-4 w-full relative">
-                            <!-- 左側點擊區域：打開紀錄 -->
-                            <div class="flex-grow w-full md:w-auto cursor-pointer" onclick="openFamilyModal('${doc.id}'); switchModalTab('records');">
-                                <div class="flex items-center flex-wrap gap-2 mb-1">
-                                    <h3 class="font-bold text-lg text-gray-800">${d.parentName}</h3>
-                                    <span class="text-xs px-2 py-1 bg-gray-100 rounded text-gray-600">${d.nationality}</span>
-                                    <span class="text-xs px-2 py-1 rounded font-bold ${riskClass}">${riskLabel}</span>
-                                </div>
-                                <div class="text-sm text-gray-600 flex flex-wrap gap-4 items-center">
-                                    <span><i class="fa-solid fa-child text-accent"></i> ${kidNames}</span>
-                                    <span class="text-gray-500">${lastInfo} ${growthStr}</span>
-                                </div>
-                            </div>
-                            
-                            <!-- 右側操作區 -->
-                            <div class="flex items-center gap-3 w-full md:w-auto justify-end z-10">
-                                 <div class="text-xs text-gray-500 bg-gray-50 p-2 rounded truncate max-w-[150px] hidden lg:block border border-gray-100" title="${d.statusReport || ''}">
-                                    <i class="fa-solid fa-comment-dots"></i> ${d.statusReport || '無回報'}
-                                </div>
-                                <!-- 編輯按鈕：強制打開基本資料頁並阻止事件冒泡 -->
-                                <button onclick="event.stopPropagation(); openFamilyModal('${doc.id}'); switchModalTab('basic');" class="bg-white border border-secondary text-black px-4 py-2 rounded hover:bg-secondary hover:text-white transition text-sm font-bold whitespace-nowrap flex items-center gap-1">
-                                    <i class="fa-solid fa-pen-to-square"></i> 編輯資料
-                                </button>
-                            </div>
-                        </div>`);
-                });
-                
-                container.innerHTML = items.length > 0 ? items.join('') : '<div class="text-center bg-white p-10 rounded border text-gray-500 shadow w-full">尚無資料，請點擊上方按鈕新增。</div>';
-            });
-        }
-
-        // ... (Other functions remain unchanged from V13.1, omitted for brevity but included in full file) ...
-        // (Ensure all functions like openFamilyModal, saveFamily, renderKidLogs are present)
-
-        function switchModalTab(tabName) {
-            document.getElementById('content-basic').classList.toggle('hidden', tabName !== 'basic');
-            document.getElementById('content-records').classList.toggle('hidden', tabName !== 'records');
-            const tBasic = document.getElementById('tab-basic'), tRec = document.getElementById('tab-records');
-            const footerBtn = document.getElementById('modalFooterBtn');
-
-            if(tabName === 'basic') {
-                tBasic.classList.add('text-primary', 'border-b-2', 'border-primary'); tBasic.classList.remove('text-gray-500');
-                tRec.classList.remove('text-primary', 'border-b-2', 'border-primary'); tRec.classList.add('text-gray-500');
-                if(footerBtn) footerBtn.style.display = 'flex';
+        function showUndoToast(message, undoCallback) { const toast = document.getElementById('undoToast'); document.getElementById('undoMessage').innerText = message; toast.classList.remove('hidden'); setTimeout(() => toast.classList.add('show'), 10); pendingUndoAction = undoCallback; if (undoTimeout) clearTimeout(undoTimeout); undoTimeout = setTimeout(() => { closeToast(); }, 5000); }
+        function closeToast() { const toast = document.getElementById('undoToast'); toast.classList.remove('show'); setTimeout(() => toast.classList.add('hidden'), 300); pendingUndoAction = null; }
+        function executeUndo() { if (pendingUndoAction) { pendingUndoAction(); closeToast(); } }
+        function getLatestLog(kid) { if (!kid.logs || kid.logs.length === 0) return null; const sorted = [...kid.logs].sort((a, b) => { const da = a.date || a.month || ''; const db = b.date || b.month || ''; return da.localeCompare(db); }); return sorted[sorted.length - 1]; }
+        function checkGrowthStagnation(kid) { if (!kid.logs || kid.logs.length < 2) return false; const sortedLogs = [...kid.logs].sort((a, b) => (a.date || a.month || '').localeCompare(b.date || b.month || '')); const latestLog = sortedLogs[sortedLogs.length - 1]; const latestDate = new Date(latestLog.date || latestLog.month + "-01"); const fourMonthsAgo = new Date(latestDate); fourMonthsAgo.setMonth(fourMonthsAgo.getMonth() - 4); let oldLog = null; for (let i = sortedLogs.length - 2; i >= 0; i--) { const d = new Date(sortedLogs[i].date || sortedLogs[i].month + "-01"); if (d <= fourMonthsAgo) { oldLog = sortedLogs[i]; break; } } if (!oldLog) return false; return Number(latestLog.height) <= Number(oldLog.height); }
+        
+        // ★ 修正：僅保留紅色警示，移除綠色邏輯 ★
+        function testAlertSystem() {
+            const alertList = document.getElementById('ownerStagnantList');
+            const board = document.getElementById('ownerHealthBoard');
+            // Toggle visibility of the red alert board
+            if (board.classList.contains('hidden')) {
+                board.classList.remove('hidden');
+                alertList.innerHTML = `<div class="bg-white p-2 rounded shadow-sm border border-red-200 flex justify-between"><span>測試孩童A</span> <span class="text-xs text-gray-500">Manager1</span></div>`;
             } else {
-                tRec.classList.add('text-primary', 'border-b-2', 'border-primary'); tRec.classList.remove('text-gray-500');
-                tBasic.classList.remove('text-primary', 'border-b-2', 'border-primary'); tBasic.classList.add('text-gray-500');
-                if(footerBtn) footerBtn.style.display = 'none'; 
-                renderKidSelectOptions();
+                board.classList.add('hidden');
             }
         }
 
-        function addKidField(data = null) {
-            const container = document.getElementById('kidsContainer');
-            const kidHtml = `<div class="grid grid-cols-1 md:grid-cols-6 gap-2 bg-white p-2 rounded border border-gray-200 mb-2 kid-entry items-end"><div class="md:col-span-1"><label class="text-[10px] text-gray-400">姓名</label><input type="text" class="kid-name w-full border p-1 text-sm rounded" value="${data ? data.name : ''}" required></div><div class="md:col-span-1"><label class="text-[10px] text-gray-400">生日</label><input type="date" class="kid-dob w-full border p-1 text-sm rounded" value="${data ? data.dob : ''}" max="9999-12-31" required></div><div class="md:col-span-1"><label class="text-[10px] text-gray-400">初始身高</label><input type="number" step="0.1" class="kid-h w-full border p-1 text-sm rounded" value="${data ? data.initialHeight : ''}" placeholder="cm" required></div><div class="md:col-span-1"><label class="text-[10px] text-gray-400">初始體重</label><input type="number" step="0.1" class="kid-w w-full border p-1 text-sm rounded" value="${data ? data.initialWeight : ''}" placeholder="kg" required></div><div class="md:col-span-1"><label class="text-[10px] text-gray-400">骨齡</label><input type="number" step="0.1" class="kid-bone w-full border p-1 text-sm rounded" value="${data ? data.boneAge || '' : ''}"></div><div class="md:col-span-1 text-right"><button type="button" onclick="removeKidField(this)" class="text-red-500 hover:text-red-700" title="刪除 (可復原)"><i class="fa-solid fa-trash"></i></button></div></div>`;
-            container.insertAdjacentHTML('beforeend', kidHtml);
-        }
-
-        function removeKidField(btn) {
-            const row = btn.closest('.kid-entry');
-            if (row.classList.contains('marked-for-deletion')) {
-                row.classList.remove('marked-for-deletion');
-                btn.innerHTML = '<i class="fa-solid fa-trash"></i>';
-                btn.classList.replace('text-green-600', 'text-red-500');
-            } else {
-                row.classList.add('marked-for-deletion');
-                btn.innerHTML = '<i class="fa-solid fa-rotate-left"></i>';
-                btn.classList.replace('text-red-500', 'text-green-600');
-            }
-        }
-
-        function renderKidSelectOptions() {
-            const select = document.getElementById('recordKidSelect');
-            select.innerHTML = '';
-            const inputs = document.querySelectorAll('.kid-entry:not(.marked-for-deletion)');
-            inputs.forEach((div, idx) => {
-                const name = div.querySelector('.kid-name').value || `孩童 ${idx+1}`;
-                const opt = document.createElement('option');
-                opt.value = idx;
-                opt.text = name;
-                select.appendChild(opt);
-            });
-            renderKidLogs();
-        }
-
+        // ... (initManagerDashboard, switchModalTab, addKidField, removeKidField, renderKidSelectOptions same as V17.1) ...
+        function initManagerDashboard() { const container = document.getElementById('managerFamilyList'); db.collection('families').where('managerId', '==', currentUser.uid).onSnapshot(snap => { container.innerHTML = snap.empty ? '<div class="col-span-3 text-center bg-white p-10 rounded border text-gray-500 shadow">尚無資料，請點擊上方按鈕新增。</div>' : ''; snap.forEach(doc => { const d = doc.data(); const kidNames = d.kids ? d.kids.map(k => k.name).join(', ') : '無孩童'; const k1 = d.kids && d.kids.length > 0 ? d.kids[0] : null; let lastInfo = '無紀錄'; let growthStr = ''; if (k1) { const latest = getLatestLog(k1); const lastH = latest ? latest.height : k1.initialHeight; const lastDate = latest ? (latest.date || latest.month) : '初始'; lastInfo = `最新: ${lastDate} / 身高 ${lastH}cm`; const growth = (Number(lastH) - Number(k1.initialHeight || 0)).toFixed(1); growthStr = `<span class="text-green-600 font-bold">(+${growth})</span>`; } const riskClass = getRiskClass(d.riskLevel); const riskLabel = getRiskLabel(d.riskLevel); const borderClass = d.riskLevel === 'red' ? 'border-riskRed' : (d.riskLevel === 'yellow' ? 'border-riskYellow' : 'border-riskGreen'); container.innerHTML += `<div class="bg-white p-4 rounded shadow border-l-4 ${borderClass} hover:shadow-lg transition flex flex-col md:flex-row items-center justify-between gap-4 w-full relative"><div class="flex-grow w-full md:w-auto cursor-pointer" onclick="openFamilyModal('${doc.id}', 'records')"><div class="flex items-center flex-wrap gap-2 mb-1"><h3 class="font-bold text-lg text-gray-800">${d.parentName}</h3><span class="text-xs px-2 py-1 bg-gray-100 rounded text-gray-600">${d.nationality}</span><span class="text-xs px-2 py-1 rounded font-bold ${riskClass}">${riskLabel}</span></div><div class="text-sm text-gray-600 flex flex-wrap gap-4 items-center"><span><i class="fa-solid fa-child text-accent"></i> ${kidNames}</span><span class="text-gray-500">${lastInfo} ${growthStr}</span></div></div><div class="flex items-center gap-3 w-full md:w-auto justify-end z-10"><div class="text-xs text-gray-500 bg-gray-50 p-2 rounded truncate max-w-[150px] hidden lg:block border border-gray-100" title="${d.statusReport || ''}"><i class="fa-solid fa-comment-dots"></i> ${d.statusReport || '無回報'}</div><button onclick="event.stopPropagation(); openFamilyModal('${doc.id}', 'basic');" class="bg-white border border-secondary text-black px-4 py-2 rounded hover:bg-secondary hover:text-white transition text-sm font-bold whitespace-nowrap flex items-center gap-1"><i class="fa-solid fa-pen-to-square"></i> 編輯資料</button><button onclick="event.stopPropagation(); deleteFamily('${doc.id}', '${d.parentName}')" class="text-red-400 hover:text-red-600 px-2 transition" title="刪除家庭"><i class="fa-solid fa-trash"></i></button></div></div>`; }); }); }
+        function switchModalTab(tabName) { document.getElementById('content-basic').classList.toggle('hidden', tabName !== 'basic'); document.getElementById('content-records').classList.toggle('hidden', tabName !== 'records'); const tBasic = document.getElementById('tab-basic'), tRec = document.getElementById('tab-records'); const footerBtn = document.getElementById('modalFooterBtn'); if(tabName === 'basic') { tBasic.classList.add('text-primary', 'border-b-2', 'border-primary'); tBasic.classList.remove('text-gray-500'); tRec.classList.remove('text-primary', 'border-b-2', 'border-primary'); tRec.classList.add('text-gray-500'); if(footerBtn) footerBtn.style.display = 'flex'; } else { tRec.classList.add('text-primary', 'border-b-2', 'border-primary'); tRec.classList.remove('text-gray-500'); tBasic.classList.remove('text-primary', 'border-b-2', 'border-primary'); tBasic.classList.add('text-gray-500'); if(footerBtn) footerBtn.style.display = 'none'; renderKidSelectOptions(); } }
+        function addKidField(data = null) { const container = document.getElementById('kidsContainer'); const kidHtml = `<div class="grid grid-cols-1 md:grid-cols-6 gap-2 bg-white p-2 rounded border border-gray-200 mb-2 kid-entry items-end"><div class="md:col-span-1"><label class="text-[10px] text-gray-400">姓名</label><input type="text" class="kid-name w-full border p-1 text-sm rounded" value="${data ? data.name : ''}" required></div><div class="md:col-span-1"><label class="text-[10px] text-gray-400">生日</label><input type="date" class="kid-dob w-full border p-1 text-sm rounded" value="${data ? data.dob : ''}" max="9999-12-31" required></div><div class="md:col-span-1"><label class="text-[10px] text-gray-400">初始身高</label><input type="number" step="0.1" class="kid-h w-full border p-1 text-sm rounded" value="${data ? data.initialHeight : ''}" placeholder="cm" required></div><div class="md:col-span-1"><label class="text-[10px] text-gray-400">初始體重</label><input type="number" step="0.1" class="kid-w w-full border p-1 text-sm rounded" value="${data ? data.initialWeight : ''}" placeholder="kg" required></div><div class="md:col-span-1"><label class="text-[10px] text-gray-400">骨齡</label><input type="number" step="0.1" class="kid-bone w-full border p-1 text-sm rounded" value="${data ? data.boneAge || '' : ''}"></div><div class="md:col-span-1 text-right"><button type="button" onclick="removeKidField(this)" class="text-red-500 hover:text-red-700" title="刪除 (可復原)"><i class="fa-solid fa-trash"></i></button></div></div>`; container.insertAdjacentHTML('beforeend', kidHtml); }
+        function removeKidField(btn) { const row = btn.closest('.kid-entry'); if (row.classList.contains('marked-for-deletion')) { row.classList.remove('marked-for-deletion'); btn.innerHTML = '<i class="fa-solid fa-trash"></i>'; btn.classList.replace('text-green-600', 'text-red-500'); } else { row.classList.add('marked-for-deletion'); btn.innerHTML = '<i class="fa-solid fa-rotate-left"></i>'; btn.classList.replace('text-red-500', 'text-green-600'); } }
+        function renderKidSelectOptions() { const select = document.getElementById('recordKidSelect'); select.innerHTML = ''; const inputs = document.querySelectorAll('.kid-entry:not(.marked-for-deletion)'); inputs.forEach((div, idx) => { const name = div.querySelector('.kid-name').value || `孩童 ${idx+1}`; const opt = document.createElement('option'); opt.value = idx; opt.text = name; select.appendChild(opt); }); renderKidLogs(); }
         function renderKidLogs() {
-            const kidIdx = document.getElementById('recordKidSelect').value;
-            const table = document.getElementById('logsHistoryTable');
-            table.innerHTML = '';
+            const kidIdx = document.getElementById('recordKidSelect').value; const table = document.getElementById('logsHistoryTable'); table.innerHTML = '';
             let logs = [];
             if (currentEditingFamily && currentEditingFamily.kids[kidIdx]) {
                 logs = currentEditingFamily.kids[kidIdx].logs || [];
-                const initH = Number(currentEditingFamily.kids[kidIdx].initialHeight);
-                const initW = Number(currentEditingFamily.kids[kidIdx].initialWeight);
-                
-                if (logs.length === 0) {
-                    table.innerHTML = '<p class="text-center text-xs text-gray-400 p-2">無歷史紀錄</p>';
-                } else {
-                    const sorted = [...logs].sort((a,b) => {
-                        const dateA = a.date || a.month || '';
-                        const dateB = b.date || b.month || '';
-                        return dateA.localeCompare(dateB);
-                    });
-                    
+                const initH = Number(currentEditingFamily.kids[kidIdx].initialHeight || 0);
+                const initW = Number(currentEditingFamily.kids[kidIdx].initialWeight || 0);
+                if (logs.length === 0) { table.innerHTML = '<p class="text-center text-xs text-gray-400 p-2">無歷史紀錄</p>'; } else {
+                    const sorted = [...logs].sort((a,b) => { const da = a.date || a.month || ''; const db = b.date || b.month || ''; return da.localeCompare(db); });
                     let html = '<table class="w-full text-xs text-left"><thead class="bg-gray-50"><tr><th class="p-1">日期</th><th class="p-1">身高(趨勢)</th><th class="p-1">體重(趨勢)</th><th class="p-1">狀態</th><th class="p-1">操作</th></tr></thead><tbody>';
-                    
                     for(let i = sorted.length - 1; i >= 0; i--) {
                         const l = sorted[i];
                         let prevH = initH, prevW = initW;
+                        // Find previous log (closest earlier date)
                         for(let j = i - 1; j >= 0; j--) { prevH = Number(sorted[j].height); prevW = Number(sorted[j].weight); break; }
-                        const diffH = (Number(l.height) - prevH).toFixed(1);
-                        const diffW = (Number(l.weight) - prevW).toFixed(1);
-                        const hClass = diffH > 0 ? 'text-green-600' : (diffH < 0 ? 'text-red-500' : 'text-gray-400');
-                        const wClass = diffW > 0 ? 'text-green-600' : (diffW < 0 ? 'text-red-500' : 'text-gray-400');
-                        const displayDate = l.date || l.month;
-                        const originalIndex = logs.indexOf(l);
-
-                        html += `<tr class="border-b hover:bg-yellow-50">
-                            <td class="p-1">${displayDate}</td>
-                            <td class="p-1 font-bold">${l.height} <span class="${hClass} text-[10px]">(${diffH>0?'+':''}${diffH})</span></td>
-                            <td class="p-1">${l.weight} <span class="${wClass} text-[10px]">(${diffW>0?'+':''}${diffW})</span></td>
-                            <td class="p-1 truncate max-w-[100px]">${l.statusReport||'-'}</td>
-                            <td class="p-1 flex gap-1">
-                                <button type="button" onclick="editLog(${originalIndex})" class="text-blue-500 hover:text-blue-700"><i class="fa-solid fa-pen"></i></button>
-                                <button type="button" onclick="deleteLog(${originalIndex})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
-                            </td>
-                        </tr>`;
+                        
+                        const diffH = (Number(l.height) - prevH).toFixed(1); const diffW = (Number(l.weight) - prevW).toFixed(1);
+                        const hClass = diffH > 0 ? 'text-green-600' : (diffH < 0 ? 'text-red-500' : 'text-gray-400'); const wClass = diffW > 0 ? 'text-green-600' : (diffW < 0 ? 'text-red-500' : 'text-gray-400');
+                        const displayDate = l.date || l.month; const originalIndex = logs.indexOf(l);
+                        html += `<tr class="border-b hover:bg-yellow-50"><td class="p-1">${displayDate}</td><td class="p-1 font-bold">${l.height} <span class="${hClass} text-[10px]">(${diffH>0?'+':''}${diffH})</span></td><td class="p-1">${l.weight} <span class="${wClass} text-[10px]">(${diffW>0?'+':''}${diffW})</span></td><td class="p-1 truncate max-w-[100px]">${l.statusReport||'-'}</td><td class="p-1 flex gap-1"><button type="button" onclick="editLog(${originalIndex})" class="text-blue-500 hover:text-blue-700"><i class="fa-solid fa-pen"></i></button><button type="button" onclick="deleteLog(${originalIndex})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button></td></tr>`;
                     }
                     html += '</tbody></table>';
                     table.innerHTML = html;
@@ -550,181 +270,65 @@
             }
         }
         
-        function editLog(index) {
-            const kidIdx = document.getElementById('recordKidSelect').value;
-            const log = currentEditingFamily.kids[kidIdx].logs[index];
-            document.getElementById('logDate').value = log.date || '';
-            document.getElementById('logHeight').value = log.height;
-            document.getElementById('logWeight').value = log.weight;
-            document.getElementById('logMassage').value = log.massage || '';
-            document.getElementById('logAcupoint').value = log.acupoint || '';
-            document.getElementById('logExercise').value = log.exercise || '';
-            document.getElementById('logStatus').value = log.statusReport || '';
-            alert("資料已帶入上方輸入框，修改後請按「新增並儲存」即可覆蓋。");
-        }
-
-        async function deleteLog(index) {
-            const kidIdx = document.getElementById('recordKidSelect').value;
-            const deletedLog = currentEditingFamily.kids[kidIdx].logs[index]; 
-            currentEditingFamily.kids[kidIdx].logs.splice(index, 1);
-            try {
-                await db.collection('families').doc(currentEditingFamily.id).update({ kids: currentEditingFamily.kids, updatedAt: new Date() });
-                renderKidLogs();
-                showUndoToast('已刪除一筆紀錄', async () => {
-                    currentEditingFamily.kids[kidIdx].logs.push(deletedLog);
-                    currentEditingFamily.kids[kidIdx].logs.sort((a,b) => (a.date||'').localeCompare(b.date||''));
-                    await db.collection('families').doc(currentEditingFamily.id).update({ kids: currentEditingFamily.kids, updatedAt: new Date() });
-                    renderKidLogs();
-                    closeToast();
-                });
-            } catch(e) { alert("刪除失敗: " + e.message); }
-        }
-
-        async function saveLogDirectly() {
-            if (!currentEditingFamily || !currentEditingFamily.id) { alert("請先儲存家庭基本資料"); return; }
-            const kidIdx = document.getElementById('recordKidSelect').value;
-            const newLog = {
-                date: document.getElementById('logDate').value,
-                height: document.getElementById('logHeight').value,
-                weight: document.getElementById('logWeight').value,
-                massage: document.getElementById('logMassage').value,
-                acupoint: document.getElementById('logAcupoint').value,
-                exercise: document.getElementById('logExercise').value,
-                statusReport: document.getElementById('logStatus').value,
-                recordedAt: new Date().toISOString()
-            };
-            if (!newLog.date || !newLog.height) { alert("日期與身高必填"); return; }
-
-            if (!currentEditingFamily.kids[kidIdx].logs) currentEditingFamily.kids[kidIdx].logs = [];
-            
-            const existingIdx = currentEditingFamily.kids[kidIdx].logs.findIndex(l => l.date === newLog.date);
-            if (existingIdx > -1) currentEditingFamily.kids[kidIdx].logs[existingIdx] = newLog;
-            else currentEditingFamily.kids[kidIdx].logs.push(newLog);
-            
-            const risk = document.querySelector('input[name="risk"]:checked').value;
-            currentEditingFamily.riskLevel = risk;
-            currentEditingFamily.statusReport = newLog.statusReport;
-
-            try {
-                await db.collection('families').doc(currentEditingFamily.id).update({ kids: currentEditingFamily.kids, riskLevel: risk, statusReport: newLog.statusReport, updatedAt: new Date() });
-                alert("紀錄已儲存！");
-                document.getElementById('logHeight').value = '';
-                document.getElementById('logStatus').value = '';
-                renderKidLogs(); 
-            } catch (e) { alert("儲存失敗: " + e.message); }
-        }
-
-        function openFamilyModal(id = null) {
-            document.getElementById('familyForm').reset();
-            document.getElementById('familyId').value = id || '';
-            document.getElementById('modalTitle').innerText = id ? (userData.role === 'owner' ? '資料詳情' : '編輯資料') : '新增資料';
-            document.getElementById('kidsContainer').innerHTML = ''; 
-            switchModalTab('basic');
-            const isReadOnly = userData.role === 'director';
-            let isEditAllowed = true;
-
-            if (id) {
-                db.collection('families').doc(id).get().then(doc => {
-                    const d = doc.data();
-                    currentEditingFamily = { id: doc.id, ...d }; 
-                    if (isReadOnly && d.managerId !== currentUser.uid) { isEditAllowed = false; }
-
-                    document.getElementById('parentName').value = d.parentName;
-                    document.getElementById('nationality').value = d.nationality;
-                    document.getElementById('joinDate').value = d.joinDate || '';
-                    document.getElementById('familyNote').value = d.familyNote || '';
-                    document.getElementById('logDate').value = new Date().toISOString().split('T')[0];
-                    
-                    if (d.kids && d.kids.length > 0) { d.kids.forEach(kid => addKidField(kid)); } else { addKidField(); }
-                    if(d.riskLevel) { const radio = document.querySelector(`input[name="risk"][value="${d.riskLevel}"]`); if(radio) radio.checked = true; }
-                    if(document.getElementById('statusReport')) document.getElementById('statusReport').value = d.statusReport || '';
-                    
-                    document.getElementById('isRenewal').checked = d.isRenewal || false;
-                    toggleDateReminder();
-                    applyReadOnlyState(!isEditAllowed);
-                });
-            } else {
-                currentEditingFamily = { kids: [] }; 
-                addKidField(); 
-                document.getElementById('logDate').value = new Date().toISOString().split('T')[0];
-                document.getElementById('isRenewal').checked = false;
-                toggleDateReminder();
-
-                applyReadOnlyState(false); 
-            }
-            document.getElementById('familyModal').classList.remove('hidden');
-        }
-
-        function applyReadOnlyState(isReadOnly) {
-            const formInputs = document.querySelectorAll('#familyForm input, #familyForm select, #familyForm textarea');
-            formInputs.forEach(el => el.disabled = isReadOnly);
-            const footerBtn = document.getElementById('modalFooterBtn');
-            if(footerBtn) footerBtn.style.display = isReadOnly ? 'none' : 'flex';
-            const addKidBtn = document.getElementById('btnAddKid');
-            if(addKidBtn) addKidBtn.style.display = isReadOnly ? 'none' : 'block';
-            const logFormContainer = document.getElementById('logFormContainer');
-            if(logFormContainer) logFormContainer.style.display = isReadOnly ? 'none' : 'block';
-            document.querySelectorAll('.kid-entry button').forEach(btn => btn.style.display = isReadOnly ? 'none' : 'block');
+        function editLog(index) { const kidIdx = document.getElementById('recordKidSelect').value; const log = currentEditingFamily.kids[kidIdx].logs[index]; document.getElementById('logDate').value = log.date || ''; document.getElementById('logHeight').value = log.height; document.getElementById('logWeight').value = log.weight; document.getElementById('logMassage').value = log.massage || ''; document.getElementById('logAcupoint').value = log.acupoint || ''; document.getElementById('logExercise').value = log.exercise || ''; document.getElementById('logStatus').value = log.statusReport || ''; 
+            // ★ 趨勢預覽計算 (Edit Mode) ★
+            const prevH = currentEditingFamily.kids[kidIdx].initialHeight;
+            const diffH = (Number(log.height) - Number(prevH)).toFixed(1);
+            document.getElementById('heightTrend').innerText = diffH > 0 ? `+${diffH}` : diffH;
+            document.getElementById('heightTrend').className = diffH > 0 ? 'text-[10px] font-bold w-12 text-green-600' : 'text-[10px] font-bold w-12 text-red-500';
+            alert("資料已帶入上方輸入框，修改後請按「儲存紀錄」即可覆蓋。"); 
         }
         
+        // ★ 即時趨勢預覽 (Input Event) ★
+        document.getElementById('logHeight').addEventListener('input', function() {
+             const kidIdx = document.getElementById('recordKidSelect').value;
+             if (currentEditingFamily && currentEditingFamily.kids[kidIdx]) {
+                 const currentVal = this.value;
+                 // 簡單抓初始值比較，若要更精細可抓上一筆 log
+                 const initH = currentEditingFamily.kids[kidIdx].initialHeight;
+                 if(currentVal && initH) {
+                     const diff = (currentVal - initH).toFixed(1);
+                     const span = document.getElementById('heightTrend');
+                     span.innerText = diff > 0 ? `+${diff}` : diff;
+                     span.className = diff > 0 ? 'text-[10px] font-bold w-12 text-green-600' : 'text-[10px] font-bold w-12 text-red-500';
+                 }
+             }
+        });
+        document.getElementById('logWeight').addEventListener('input', function() {
+             const kidIdx = document.getElementById('recordKidSelect').value;
+             if (currentEditingFamily && currentEditingFamily.kids[kidIdx]) {
+                 const currentVal = this.value;
+                 const initW = currentEditingFamily.kids[kidIdx].initialWeight;
+                 if(currentVal && initW) {
+                     const diff = (currentVal - initW).toFixed(1);
+                     const span = document.getElementById('weightTrend');
+                     span.innerText = diff > 0 ? `+${diff}` : diff;
+                     span.className = diff > 0 ? 'text-[10px] font-bold w-12 text-green-600' : 'text-[10px] font-bold w-12 text-red-500';
+                 }
+             }
+        });
+
+        async function deleteLog(index) { const kidIdx = document.getElementById('recordKidSelect').value; const deletedLog = currentEditingFamily.kids[kidIdx].logs[index]; currentEditingFamily.kids[kidIdx].logs.splice(index, 1); try { await db.collection('families').doc(currentEditingFamily.id).update({ kids: currentEditingFamily.kids, updatedAt: new Date() }); renderKidLogs(); showUndoToast('已刪除一筆紀錄', async () => { currentEditingFamily.kids[kidIdx].logs.push(deletedLog); currentEditingFamily.kids[kidIdx].logs.sort((a,b) => (a.date||'').localeCompare(b.date||'')); await db.collection('families').doc(currentEditingFamily.id).update({ kids: currentEditingFamily.kids, updatedAt: new Date() }); renderKidLogs(); closeToast(); }); } catch(e) { alert("刪除失敗: " + e.message); } }
+        async function saveLogDirectly() { if (!currentEditingFamily || !currentEditingFamily.id) { alert("請先儲存家庭基本資料"); return; } const kidIdx = document.getElementById('recordKidSelect').value; const newLog = { date: document.getElementById('logDate').value, height: document.getElementById('logHeight').value, weight: document.getElementById('logWeight').value, massage: document.getElementById('logMassage').value, acupoint: document.getElementById('logAcupoint').value, exercise: document.getElementById('logExercise').value, statusReport: document.getElementById('logStatus').value, recordedAt: new Date().toISOString() }; if (!newLog.date || !newLog.height) { alert("日期與身高必填"); return; } if (!currentEditingFamily.kids[kidIdx].logs) currentEditingFamily.kids[kidIdx].logs = []; const existingIdx = currentEditingFamily.kids[kidIdx].logs.findIndex(l => l.date === newLog.date); if (existingIdx > -1) currentEditingFamily.kids[kidIdx].logs[existingIdx] = newLog; else currentEditingFamily.kids[kidIdx].logs.push(newLog); const risk = document.querySelector('input[name="risk"]:checked').value; currentEditingFamily.riskLevel = risk; currentEditingFamily.statusReport = newLog.statusReport; try { await db.collection('families').doc(currentEditingFamily.id).update({ kids: currentEditingFamily.kids, riskLevel: risk, statusReport: newLog.statusReport, updatedAt: new Date() }); alert("紀錄已儲存！"); document.getElementById('logHeight').value = ''; document.getElementById('logStatus').value = ''; renderKidLogs(); } catch (e) { alert("儲存失敗: " + e.message); } }
+        async function deleteFamily(id, name) { if(confirm(`確定要刪除「${name}」的所有資料嗎？此動作無法復原！`)) { try { await db.collection('families').doc(id).delete(); } catch(e) { alert("刪除失敗: " + e.message); } } }
+        
+        // ... (Modal logic same as before) ...
+        function openFamilyModal(id = null, initialTab = 'basic') { document.getElementById('familyForm').reset(); document.getElementById('familyId').value = id || ''; document.getElementById('modalTitle').innerText = id ? (userData.role === 'owner' ? '資料詳情' : '編輯資料') : '新增資料'; document.getElementById('kidsContainer').innerHTML = ''; switchModalTab(initialTab); const isReadOnly = userData.role === 'director'; let isEditAllowed = true; if (id) { db.collection('families').doc(id).get().then(doc => { const d = doc.data(); currentEditingFamily = { id: doc.id, ...d }; if (isReadOnly && d.managerId !== currentUser.uid) { isEditAllowed = false; } document.getElementById('parentName').value = d.parentName; document.getElementById('nationality').value = d.nationality; document.getElementById('joinDate').value = d.joinDate || ''; document.getElementById('familyNote').value = d.familyNote || ''; document.getElementById('logDate').value = new Date().toISOString().split('T')[0]; if (d.kids && d.kids.length > 0) { d.kids.forEach(kid => addKidField(kid)); } else { addKidField(); } if(d.riskLevel) { const radio = document.querySelector(`input[name="risk"][value="${d.riskLevel}"]`); if(radio) radio.checked = true; } if(document.getElementById('statusReport')) document.getElementById('statusReport').value = d.statusReport || ''; document.getElementById('isRenewal').checked = d.isRenewal || false; toggleDateReminder(); applyReadOnlyState(!isEditAllowed); }); } else { currentEditingFamily = { kids: [] }; addKidField(); document.getElementById('logDate').value = new Date().toISOString().split('T')[0]; document.getElementById('isRenewal').checked = false; toggleDateReminder(); applyReadOnlyState(false); } document.getElementById('familyModal').classList.remove('hidden'); }
+        function applyReadOnlyState(isReadOnly) { const formInputs = document.querySelectorAll('#familyForm input, #familyForm select, #familyForm textarea'); formInputs.forEach(el => el.disabled = isReadOnly); const footerBtn = document.getElementById('modalFooterBtn'); if(footerBtn) footerBtn.style.display = isReadOnly ? 'none' : 'flex'; const addKidBtn = document.getElementById('btnAddKid'); if(addKidBtn) addKidBtn.style.display = isReadOnly ? 'none' : 'block'; const logFormContainer = document.getElementById('logFormContainer'); if(logFormContainer) logFormContainer.style.display = isReadOnly ? 'none' : 'block'; document.querySelectorAll('.kid-entry button').forEach(btn => btn.style.display = isReadOnly ? 'none' : 'block'); }
         function closeFamilyModal() { document.getElementById('familyModal').classList.add('hidden'); closeToast(); }
-
-        async function saveFamily(e) {
-            e.preventDefault();
-            const id = document.getElementById('familyId').value;
-            const baseData = {
-                parentName: document.getElementById('parentName').value, nationality: document.getElementById('nationality').value,
-                joinDate: document.getElementById('joinDate').value,
-                familyNote: document.getElementById('familyNote').value, 
-                riskLevel: document.querySelector('input[name="risk"]:checked').value,
-                statusReport: document.getElementById('statusReport').value, 
-                isRenewal: document.getElementById('isRenewal').checked, 
-                updatedAt: new Date()
-            };
-            const kidDivs = document.querySelectorAll('.kid-entry:not(.marked-for-deletion)');
-            const kidsData = [];
-            kidDivs.forEach((div, idx) => {
-                const name = div.querySelector('.kid-name').value; const dob = div.querySelector('.kid-dob').value;
-                const h = div.querySelector('.kid-h').value; const w = div.querySelector('.kid-w').value; const bone = div.querySelector('.kid-bone').value;
-                let existingLogs = [];
-                if (currentEditingFamily && currentEditingFamily.kids) {
-                    const match = currentEditingFamily.kids.find(k => k.name === name && k.dob === dob);
-                    if(match) existingLogs = match.logs || [];
-                }
-                kidsData.push({ name: name, dob: dob, initialHeight: h, initialWeight: w, boneAge: bone, logs: existingLogs });
-            });
-            baseData.kids = kidsData;
-
-            try {
-                if (id) { await db.collection('families').doc(id).update(baseData); } 
-                else {
-                    baseData.managerId = currentUser.uid; baseData.managerName = userData.name; baseData.createdAt = new Date();
-                    await db.collection('families').add(baseData);
-                }
-                closeFamilyModal();
-            } catch (err) { alert("儲存失敗: " + err.message); }
-        }
-
-        async function assignDirector(managerId, directorId) {
-            const directorName = directorId ? document.querySelector(`#dir_opt_${managerId}_${directorId}`).innerText : null;
-            try {
-                await db.collection('users').doc(managerId).update({ directorId: directorId || null, directorName: directorName || null });
-                alert("班主任分配更新成功！");
-            } catch (e) { alert("分配失敗: " + e.message); }
-        }
+        async function saveFamily(e) { e.preventDefault(); const id = document.getElementById('familyId').value; const baseData = { parentName: document.getElementById('parentName').value, nationality: document.getElementById('nationality').value, joinDate: document.getElementById('joinDate').value, familyNote: document.getElementById('familyNote').value, riskLevel: document.querySelector('input[name="risk"]:checked').value, statusReport: document.getElementById('statusReport').value, isRenewal: document.getElementById('isRenewal').checked, updatedAt: new Date() }; const kidDivs = document.querySelectorAll('.kid-entry:not(.marked-for-deletion)'); const kidsData = []; kidDivs.forEach((div, idx) => { const name = div.querySelector('.kid-name').value; const dob = div.querySelector('.kid-dob').value; const h = div.querySelector('.kid-h').value; const w = div.querySelector('.kid-w').value; const bone = div.querySelector('.kid-bone').value; let existingLogs = []; if (currentEditingFamily && currentEditingFamily.kids) { const match = currentEditingFamily.kids.find(k => k.name === name && k.dob === dob); if(match) existingLogs = match.logs || []; } kidsData.push({ name: name, dob: dob, initialHeight: h, initialWeight: w, boneAge: bone, logs: existingLogs }); }); baseData.kids = kidsData; try { if (id) { await db.collection('families').doc(id).update(baseData); } else { baseData.managerId = currentUser.uid; baseData.managerName = userData.name; baseData.createdAt = new Date(); await db.collection('families').add(baseData); } closeFamilyModal(); } catch (err) { alert("儲存失敗: " + err.message); } }
+        async function assignDirector(managerId, directorId) { const directorName = directorId ? document.querySelector(`#dir_opt_${managerId}_${directorId}`).innerText : null; try { await db.collection('users').doc(managerId).update({ directorId: directorId || null, directorName: directorName || null }); alert("班主任分配更新成功！"); } catch (e) { alert("分配失敗: " + e.message); } }
 
         async function initOwnerDashboard() {
             let families = [];
             db.collection('families').onSnapshot(snap => {
                 families = []; snap.forEach(d => { if(d.data().kids && d.data().kids.length > 0) families.push({id: d.id, ...d.data()}); });
-                updateOwnerStats(families); 
-                updateCharts(families); 
+                updateOwnerStats(families); updateCharts(families);
             }, err => log("Error: " + err.message, "error"));
             
             db.collection('users').onSnapshot(snap => {
                 const div = document.getElementById('staffList'); div.innerHTML = ''; allStaffCache = [];
-                const directors = [];
-                const managers = [];
+                const directors = []; const managers = [];
                 snap.forEach(doc => {
                     const u = doc.data();
                     if(u.role === 'director') directors.push({id: doc.id, name: u.name});
@@ -736,32 +340,28 @@
                 if(families.length > 0) filterOwnerTable('all', null, families);
                 managers.forEach(m => {
                     let dirOptions = `<option value="">未分配</option>`;
-                    directors.forEach(d => {
-                        const selected = m.directorId === d.id ? 'selected' : '';
-                        dirOptions += `<option id="dir_opt_${m.id}_${d.id}" value="${d.id}" ${selected}>${d.name}</option>`;
-                    });
+                    directors.forEach(d => { const selected = m.directorId === d.id ? 'selected' : ''; dirOptions += `<option id="dir_opt_${m.id}_${d.id}" value="${d.id}" ${selected}>${d.name}</option>`; });
                     const myFamilies = families.filter(f => f.managerId === m.id);
                     let avgHeight = 0;
-                    if (myFamilies.length > 0) { let total = 0; myFamilies.forEach(f => { const k = f.kids[0]; const latest = getLatestLog(k); const h = latest ? latest.height : k.initialHeight; total += Number(h); }); avgHeight = (total / myFamilies.length).toFixed(1); }
+                    if (myFamilies.length > 0) { 
+                        let totalH = 0; let count = 0;
+                        myFamilies.forEach(f => { 
+                            if(f.kids) f.kids.forEach(k => {
+                                const latest = getLatestLog(k);
+                                const h = latest ? latest.height : k.initialHeight; 
+                                totalH += Number(h); count++;
+                            });
+                        }); 
+                        avgHeight = count ? (totalH / count).toFixed(1) : 0; 
+                    }
                     div.innerHTML += `<div class="bg-white p-4 rounded border shadow-sm"><div><p class="font-bold text-gray-800">${m.name}</p><p class="text-xs text-gray-500">${m.username}</p><span class="text-xs px-2 py-0.5 rounded bg-gray-200 text-gray-600">管理師</span><p class="text-xs mt-1 text-gray-600">平均身高: <b>${avgHeight}</b> cm</p></div><div class="mt-2 border-t pt-2 border-gray-100"><label class="text-xs text-gray-500 font-bold">指派督導班主任:</label><select onchange="assignDirector('${m.id}', this.value)" class="text-xs border rounded p-1 w-full mt-1 bg-gray-50 focus:bg-white outline-none">${dirOptions}</select></div><div class="mt-3 flex flex-wrap gap-1 justify-end border-t pt-2 border-gray-100"><button onclick="changeRole('${m.id}', 'director')" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-bold">升遷</button><button onclick="deleteStaff('${m.id}')" class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-bold">移除</button><button onclick="openTransferModal('${m.id}','${m.name}')" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold">移交家庭</button></div></div>`;
                 });
-                directors.forEach(d => {
-                     div.innerHTML += `<div class="bg-yellow-50 p-4 rounded border border-yellow-200 shadow-sm"><div><p class="font-bold text-gray-800">${d.name} <i class="fa-solid fa-star text-yellow-500 text-xs"></i></p><span class="text-xs px-2 py-0.5 rounded bg-primary text-white">班主任</span></div><div class="mt-3 flex flex-wrap gap-1 justify-end border-t pt-2 border-yellow-200"><button onclick="changeRole('${d.id}', 'manager')" class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded font-bold">降職</button><button onclick="deleteStaff('${d.id}')" class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-bold">移除</button></div></div>`;
-                });
+                directors.forEach(d => { div.innerHTML += `<div class="bg-yellow-50 p-4 rounded border border-yellow-200 shadow-sm"><div><p class="font-bold text-gray-800">${d.name} <i class="fa-solid fa-star text-yellow-500 text-xs"></i></p><span class="text-xs px-2 py-0.5 rounded bg-primary text-white">班主任</span></div><div class="mt-3 flex flex-wrap gap-1 justify-end border-t pt-2 border-yellow-200"><button onclick="changeRole('${d.id}', 'manager')" class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded font-bold">降職</button><button onclick="deleteStaff('${d.id}')" class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-bold">移除</button></div></div>`; });
             }, err => log("老闆員工載入錯誤: " + err.message, "error"));
         }
         
-        async function changeRole(uid, newRole) {
-            if(confirm(`確定要變更權限為 ${newRole === 'director' ? '班主任' : '管理師'} 嗎？`)) {
-                try { await db.collection('users').doc(uid).update({ role: newRole }); alert("權限變更成功！"); } catch (e) { alert("變更失敗: " + e.message); }
-            }
-        }
-
-        async function deleteStaff(uid) {
-            if(confirm("確定移除此員工？")) {
-                try { await db.collection('users').doc(uid).delete(); alert("員工已移除"); } catch (e) { alert("移除失敗: " + e.message); }
-            }
-        }
+        async function changeRole(uid, newRole) { if(confirm(`確定要變更權限為 ${newRole === 'director' ? '班主任' : '管理師'} 嗎？`)) { try { await db.collection('users').doc(uid).update({ role: newRole }); alert("權限變更成功！"); } catch (e) { alert("變更失敗: " + e.message); } } }
+        async function deleteStaff(uid) { if(confirm("確定移除此員工？")) { try { await db.collection('users').doc(uid).delete(); alert("員工已移除"); } catch (e) { alert("移除失敗: " + e.message); } } }
 
         function updateOwnerStats(families) {
             document.getElementById('ownerTotalFamilies').innerText = families.length;
@@ -772,6 +372,11 @@
             nations.forEach(n => { nationDiv.innerHTML += `<button onclick="filterOwnerTable('nation', '${n}', window.currentFamilies)" class="bg-secondary text-black px-3 py-1 rounded text-sm whitespace-nowrap hover:opacity-80 transition">${n}</button>`; });
             window.currentFamilies = families;
             
+            const alertList = document.getElementById('ownerStagnantList');
+            const alertSection = document.getElementById('ownerHealthBoard');
+            alertList.innerHTML = '';
+            let alertCount = 0;
+
             families.forEach(f => {
                 stats.total++;
                 if(f.riskLevel === 'red') stats.risk++;
@@ -786,119 +391,72 @@
                         }
                         const latest = getLatestLog(k);
                         const currentH = latest ? latest.height : k.initialHeight;
-                        const grow = Number(currentH) - Number(k.initialHeight);
+                        const grow = Number(currentH) - Number(k.initialHeight || 0);
                         stats.totalGrowth += grow;
                         stats.kidCount++;
+
+                        if(checkGrowthStagnation(k)) {
+                            alertCount++;
+                            alertList.innerHTML += `<div class="bg-white p-2 rounded shadow-sm border border-red-200 flex justify-between"><span>${k.name}</span> <span class="text-xs text-gray-500">${f.managerName}</span></div>`;
+                        }
                     });
                 }
             });
+            
+            // 修正邏輯：有警示才顯示紅色看板，否則完全隱藏
+            if (alertCount > 0) {
+                alertSection.classList.remove('hidden');
+                alertList.classList.remove('hidden');
+            } else {
+                alertSection.classList.add('hidden');
+            }
+
             document.getElementById('ownerTotalFamilies').innerText = stats.total;
             document.getElementById('ownerRiskCount').innerText = stats.risk;
             document.getElementById('ownerBirthdayCount').innerText = stats.bday;
-            const avg = stats.kidCount ? (stats.totalGrowth / stats.kidCount).toFixed(1) : 0;
-            document.getElementById('ownerAvgGrowth').innerText = avg + " cm";
             document.getElementById('ownerBirthdayList').innerText = bdayNames.length ? bdayNames.join(', ') : '無';
             filterOwnerTable('all', null, families); 
         }
 
         let managerChartInstance = null, nationChartInstance = null;
         function updateCharts(families) {
-            const managerData = {};
-            families.forEach(f => {
-                const mName = f.managerName || '未知';
-                if(!managerData[mName]) managerData[mName] = { totalH: 0, count: 0 };
-                const k = f.kids[0];
-                const latest = getLatestLog(k);
-                const h = latest ? latest.height : k.initialHeight;
-                managerData[mName].totalH += Number(h);
-                managerData[mName].count++;
-            });
-            const mLabels = Object.keys(managerData); const mValues = mLabels.map(name => (managerData[name].totalH / managerData[name].count).toFixed(1));
-            const nationData = {};
-            families.forEach(f => {
-                const nat = f.nationality || '未知';
-                if(!nationData[nat]) nationData[nat] = { totalGrow: 0, count: 0 };
-                const k = f.kids[0];
-                const latest = getLatestLog(k);
-                const currentH = latest ? latest.height : k.initialHeight;
-                const grow = Number(currentH) - Number(k.initialHeight);
-                nationData[nat].totalGrow += grow;
-                nationData[nat].count++;
-            });
-            const nLabels = Object.keys(nationData); const nValues = nLabels.map(nat => (nationData[nat].totalGrow / nationData[nat].count).toFixed(1));
-            if(managerChartInstance) managerChartInstance.destroy();
-            const ctxM = document.getElementById('managerChart').getContext('2d');
-            managerChartInstance = new Chart(ctxM, { type: 'bar', data: { labels: mLabels, datasets: [{ label: '平均身高 (cm)', data: mValues, backgroundColor: 'rgba(255, 152, 0, 0.6)', borderColor: 'rgba(255, 152, 0, 1)', borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: false } } } });
-            if(nationChartInstance) nationChartInstance.destroy();
-            const ctxN = document.getElementById('nationChart').getContext('2d');
-            nationChartInstance = new Chart(ctxN, { type: 'bar', data: { labels: nLabels, datasets: [{ label: '平均生長幅度 (cm)', data: nValues, backgroundColor: 'rgba(160, 82, 45, 0.6)', borderColor: 'rgba(160, 82, 45, 1)', borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } } });
+            const managerData = {}; families.forEach(f => { const mName = f.managerName || '未知'; if(!managerData[mName]) managerData[mName] = { totalH: 0, count: 0 }; if(f.kids) f.kids.forEach(k => { const latest = getLatestLog(k); const h = latest ? latest.height : k.initialHeight; managerData[mName].totalH += Number(h); managerData[mName].count++; }); }); const mLabels = Object.keys(managerData); const mValues = mLabels.map(name => (managerData[name].totalH / managerData[name].count).toFixed(1));
+            const nationData = {}; families.forEach(f => { const nat = f.nationality || '未知'; if(!nationData[nat]) nationData[nat] = { totalGrow: 0, count: 0 }; if(f.kids) f.kids.forEach(k => { const latest = getLatestLog(k); const currentH = latest ? latest.height : k.initialHeight; const grow = Number(currentH) - Number(k.initialHeight || 0); nationData[nat].totalGrow += grow; nationData[nat].count++; }); }); const nLabels = Object.keys(nationData); const nValues = nLabels.map(nat => (nationData[nat].totalGrow / nationData[nat].count).toFixed(1));
+            if(managerChartInstance) managerChartInstance.destroy(); const ctxM = document.getElementById('managerChart').getContext('2d'); managerChartInstance = new Chart(ctxM, { type: 'bar', data: { labels: mLabels, datasets: [{ label: '平均身高 (cm)', data: mValues, backgroundColor: 'rgba(255, 152, 0, 0.6)', borderColor: 'rgba(255, 152, 0, 1)', borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: false } } } });
+            if(nationChartInstance) nationChartInstance.destroy(); const ctxN = document.getElementById('nationChart').getContext('2d'); nationChartInstance = new Chart(ctxN, { type: 'bar', data: { labels: nLabels, datasets: [{ label: '平均生長幅度 (cm)', data: nValues, backgroundColor: 'rgba(160, 82, 45, 0.6)', borderColor: 'rgba(160, 82, 45, 1)', borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } } });
         }
-
-        function openTransferModal(sid, sname) {
-            transferSourceId = sid; document.getElementById('transferModalTitle').innerText = `移交 ${sname} 的家庭`;
-            const sel = document.getElementById('targetManagerSelect'); sel.innerHTML = '<option>請選擇</option>';
-            allStaffCache.filter(s=>s.id!==sid).forEach(s => sel.innerHTML += `<option value="${s.id}">${s.name}</option>`);
-            document.getElementById('transferModal').classList.remove('hidden');
-        }
-        async function confirmTransfer() {
-            const tid = document.getElementById('targetManagerSelect').value; if(!tid) return;
-            const tName = document.getElementById('targetManagerSelect').options[document.getElementById('targetManagerSelect').selectedIndex].text;
-            const batch = db.batch();
-            const snap = await db.collection('families').where('managerId','==',transferSourceId).get();
-            snap.forEach(doc => batch.update(doc.ref, {managerId: tid, managerName: tName}));
-            await batch.commit(); alert('移交成功'); document.getElementById('transferModal').classList.add('hidden');
-        }
-
-        function filterOwnerTable(type, val, families) {
-            const tbody = document.getElementById('ownerFamilyTable'); tbody.innerHTML = '';
-            let filtered = families || window.currentFamilies || [];
-            
-            // 篩選邏輯 (V13.2)
-            if (type === 'risk') filtered = filtered.filter(f => f.riskLevel === 'red');
-            if (type === 'nation') filtered = filtered.filter(f => f.nationality === val);
-            if (type === 'search') {
-                const term = document.getElementById('familySearch').value.toLowerCase();
-                filtered = filtered.filter(f => {
-                    const parent = f.parentName.toLowerCase();
-                    const nation = f.nationality.toLowerCase();
-                    const kidNames = f.kids ? f.kids.map(k => k.name.toLowerCase()).join(' ') : '';
-                    return parent.includes(term) || nation.includes(term) || kidNames.includes(term);
-                });
-            }
-
-            filtered.forEach(f => {
-                const k = f.kids[0]; 
-                const latest = getLatestLog(k);
-                const currentH = latest ? latest.height : k.initialHeight;
-                const grow = (Number(currentH) - Number(k.initialHeight)).toFixed(1);
-                const directorName = (f.managerId && managerDirectorMap[f.managerId]) ? managerDirectorMap[f.managerId] : '-';
-
-                tbody.innerHTML += `<tr class="hover:bg-gray-50 transition border-b border-gray-100"><td class="p-3 font-bold text-gray-600">${f.nationality}</td><td class="p-3 font-bold text-gray-800">${f.parentName}</td><td class="p-3"><div class="font-bold text-gray-800">${k.name}</div><div class="text-xs text-gray-400">${k.dob}</div></td><td class="p-3"><div>${currentH} cm</div><div class="text-xs text-riskGreen font-bold">+${grow} cm</div></td><td class="p-3 text-sm text-gray-600">${f.managerName}</td><td class="p-3 text-sm text-primary font-bold">${directorName}</td><td class="p-3 text-center"><span class="risk-dot ${getRiskDotClass(f.riskLevel)}"></span></td><td class="p-3 text-center"><button onclick="openFamilyModal('${f.id}')" class="bg-secondary text-black px-3 py-1 rounded text-xs hover:opacity-80 transition font-bold">查看</button></td></tr>`;
-            });
-        }
-        // ... (Director Logic & Utils same as before)
-        async function initDirectorDashboard() { /* Same logic */ 
-            log("初始化班主任儀表板...");
-
-            // 1. Personal Caseload (Updated for horizontal layout in V14.2)
-            const myContainer = document.getElementById('directorMyFamilyList');
-            db.collection('families').where('managerId', '==', currentUser.uid).onSnapshot(snap => {
-                const items = [];
+        function openTransferModal(sid, sname) { transferSourceId = sid; document.getElementById('transferModalTitle').innerText = `移交 ${sname} 的家庭`; const sel = document.getElementById('targetManagerSelect'); sel.innerHTML = '<option>請選擇</option>'; allStaffCache.filter(s=>s.id!==sid).forEach(s => sel.innerHTML += `<option value="${s.id}">${s.name}</option>`); document.getElementById('transferModal').classList.remove('hidden'); }
+        async function confirmTransfer() { const tid = document.getElementById('targetManagerSelect').value; if(!tid) return; const tName = document.getElementById('targetManagerSelect').options[document.getElementById('targetManagerSelect').selectedIndex].text; const batch = db.batch(); const snap = await db.collection('families').where('managerId','==',transferSourceId).get(); snap.forEach(doc => batch.update(doc.ref, {managerId: tid, managerName: tName})); await batch.commit(); alert('移交成功'); document.getElementById('transferModal').classList.add('hidden'); }
+        function filterOwnerTable(type, val, families) { const tbody = document.getElementById('ownerFamilyTable'); tbody.innerHTML = ''; let filtered = families || window.currentFamilies || []; if (type === 'risk') filtered = filtered.filter(f => f.riskLevel === 'red'); if (type === 'nation') filtered = filtered.filter(f => f.nationality === val); if (type === 'search') { const term = document.getElementById('familySearch').value.toLowerCase(); filtered = filtered.filter(f => { const parent = f.parentName.toLowerCase(); const nation = f.nationality.toLowerCase(); const kidNames = f.kids ? f.kids.map(k => k.name.toLowerCase()).join(' ') : ''; return parent.includes(term) || nation.includes(term) || kidNames.includes(term); }); } filtered.forEach(f => { const k = f.kids && f.kids.length > 0 ? f.kids[0] : { name: '-', dob: '-' }; const latest = getLatestLog(k); const currentH = latest ? latest.height : k.initialHeight || 0; const grow = (Number(currentH) - Number(k.initialHeight || 0)).toFixed(1); const directorName = (f.managerId && managerDirectorMap[f.managerId]) ? managerDirectorMap[f.managerId] : '-'; tbody.innerHTML += `<tr class="hover:bg-gray-50 transition border-b border-gray-100"><td class="p-3 font-bold text-gray-600">${f.nationality}</td><td class="p-3 font-bold text-gray-800">${f.parentName}</td><td class="p-3"><div class="font-bold text-gray-800">${k.name}</div><div class="text-xs text-gray-400">${k.dob}</div></td><td class="p-3"><div>${currentH} cm</div><div class="text-xs text-riskGreen font-bold">+${grow} cm</div></td><td class="p-3 text-sm text-gray-600">${f.managerName}</td><td class="p-3 text-sm text-primary font-bold">${directorName}</td><td class="p-3 text-center"><span class="risk-dot ${getRiskDotClass(f.riskLevel)}"></span></td><td class="p-3 text-center"><button onclick="openFamilyModal('${f.id}')" class="bg-secondary text-black px-3 py-1 rounded text-xs hover:opacity-80 transition font-bold">查看</button></td></tr>`; }); }
+        
+        // ★ Update Director Dashboard to use health board logic ★
+        async function initDirectorDashboard() {
+             const myContainer = document.getElementById('directorMyFamilyList');
+             // ... (Personal Caseload Logic same as V17.2)
+             db.collection('families').where('managerId', '==', currentUser.uid).onSnapshot(snap => {
+                myContainer.innerHTML = snap.empty ? '<div class="col-span-3 text-center bg-white p-6 rounded border text-gray-500">您目前沒有親自管理的家庭</div>' : '';
                 snap.forEach(doc => {
+                    // ... (Rendering Director's own families)
                     const d = doc.data();
-                    const kidNames = d.kids.map(k => k.name).join(', ');
-                    const k1 = d.kids[0];
-                    const latest = getLatestLog(k1);
-                    const lastH = latest ? latest.height : k1.initialHeight;
-                    const lastDate = latest ? (latest.date || latest.month) : '無紀錄';
-                    const growth = (Number(lastH) - Number(k1.initialHeight)).toFixed(1);
+                    const kidNames = d.kids ? d.kids.map(k => k.name).join(', ') : '';
+                    const k1 = d.kids && d.kids.length > 0 ? d.kids[0] : null;
+                    let lastInfo = '無紀錄';
+                    let growthStr = '';
+                    if (k1) {
+                        const latest = getLatestLog(k1);
+                        const lastH = latest ? latest.height : k1.initialHeight;
+                        const lastDate = latest ? (latest.date || latest.month) : '初始';
+                        lastInfo = `最新: ${lastDate} / 身高 ${lastH}cm`;
+                        const growth = (Number(lastH) - Number(k1.initialHeight)).toFixed(1);
+                        growthStr = `<span class="text-green-600 font-bold">(+${growth})</span>`;
+                    }
                     const riskClass = getRiskClass(d.riskLevel);
                     const riskLabel = getRiskLabel(d.riskLevel);
                     const borderClass = d.riskLevel === 'red' ? 'border-riskRed' : (d.riskLevel === 'yellow' ? 'border-riskYellow' : 'border-riskGreen');
 
-                    items.push(`
+                    myContainer.innerHTML += `
                         <div class="bg-white p-4 rounded shadow border-l-4 ${borderClass} hover:shadow-lg transition flex flex-col md:flex-row items-center justify-between gap-4 w-full relative">
-                            <div class="flex-grow w-full md:w-auto cursor-pointer" onclick="openFamilyModal('${doc.id}'); switchModalTab('records');">
+                            <div class="flex-grow w-full md:w-auto cursor-pointer" onclick="openFamilyModal('${doc.id}', 'records')">
                                 <div class="flex items-center flex-wrap gap-2 mb-1">
                                     <h3 class="font-bold text-lg text-gray-800">${d.parentName}</h3>
                                     <span class="text-xs px-2 py-1 bg-gray-100 rounded text-gray-600">${d.nationality}</span>
@@ -906,42 +464,52 @@
                                 </div>
                                 <div class="text-sm text-gray-600 flex flex-wrap gap-4 items-center">
                                     <span><i class="fa-solid fa-child text-accent"></i> ${kidNames}</span>
-                                    <span class="text-gray-500">最新: ${lastDate} / 身高 ${lastH}cm <span class="text-green-600">(+${growth})</span></span>
+                                    <span class="text-gray-500">${lastInfo} ${growthStr}</span>
                                 </div>
                             </div>
                             <div class="flex items-center gap-3 w-full md:w-auto justify-end z-10">
-                                <button onclick="event.stopPropagation(); openFamilyModal('${doc.id}'); switchModalTab('basic');" class="bg-white border border-secondary text-black px-4 py-2 rounded hover:bg-secondary hover:text-white transition text-sm font-bold whitespace-nowrap flex items-center gap-1">
+                                <button onclick="event.stopPropagation(); openFamilyModal('${doc.id}', 'basic');" class="bg-white border border-secondary text-black px-4 py-2 rounded hover:bg-secondary hover:text-white transition text-sm font-bold whitespace-nowrap flex items-center gap-1">
                                     <i class="fa-solid fa-pen-to-square"></i> 編輯資料
                                 </button>
+                                <button onclick="event.stopPropagation(); deleteFamily('${doc.id}', '${d.parentName}')" class="text-red-400 hover:text-red-600 px-2 transition" title="刪除家庭">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
                             </div>
-                        </div>`);
+                        </div>`;
                 });
-                myContainer.innerHTML = items.length > 0 ? items.join('') : '<div class="text-center bg-white p-6 rounded border text-gray-500">您目前沒有親自管理的家庭</div>';
             });
 
-            // 2. Supervision
-            const teamSnap = await db.collection('users').where('directorId', '==', currentUser.uid).get();
-            const teamIds = teamSnap.docs.map(d => d.id);
-            
-            if (teamIds.length === 0) { document.getElementById('directorTeamList').innerHTML = '<p class="text-gray-500">尚無分配管理師</p>'; return; }
+             const teamSnap = await db.collection('users').where('directorId', '==', currentUser.uid).get();
+             const teamIds = teamSnap.docs.map(d => d.id);
 
-            db.collection('families').where('managerId', 'in', teamIds).onSnapshot(fSnap => {
+             // Supervision Logic
+             db.collection('families').where('managerId', 'in', teamIds.length ? teamIds : ['dummy']).onSnapshot(fSnap => {
                 const teamDiv = document.getElementById('directorTeamList'); 
                 const riskDiv = document.getElementById('directorRiskList'); 
                 const familyTableBody = document.getElementById('directorFamilyTable');
-                teamDiv.innerHTML = ''; riskDiv.innerHTML = ''; familyTableBody.innerHTML = '';
-
-                let managerStats = {}; 
+                const alertList = document.getElementById('directorStagnantList');
+                const alertSection = document.getElementById('directorHealthBoard');
                 
-                fSnap.forEach(doc => {
-                    const d = doc.data(); 
-                    if (!d.kids || d.kids.length === 0) return;
+                // Clear content
+                teamDiv.innerHTML = ''; riskDiv.innerHTML = ''; familyTableBody.innerHTML = ''; alertList.innerHTML = '';
 
-                    const k = d.kids[0];
+                let alertCount = 0;
+                let managerStats = {};
+
+                fSnap.forEach(doc => {
+                    const d = doc.data();
+                    if(d.kids) d.kids.forEach(kid => {
+                        if(checkGrowthStagnation(kid)) {
+                             alertCount++;
+                             alertList.innerHTML += `<div class="bg-white p-2 rounded shadow-sm border border-red-200 flex justify-between"><span>${kid.name}</span> <span class="text-xs text-gray-500">${d.managerName}</span></div>`;
+                        }
+                    });
+                    
+                    // ... (Rest of stats and table rendering from V17.2)
+                    const k = d.kids && d.kids.length > 0 ? d.kids[0] : { name: '-', dob: '-', initialHeight: 0 };
                     const latest = getLatestLog(k);
                     const lastH = latest ? latest.height : k.initialHeight;
                     const growth = (Number(lastH) - Number(k.initialHeight)).toFixed(1);
-
                     const mId = d.managerId;
                     const mName = d.managerName || '未分配';
 
@@ -955,13 +523,19 @@
                     
                     familyTableBody.innerHTML += `<tr class="hover:bg-gray-50 transition border-b border-gray-100"><td class="p-3 font-bold text-gray-600">${d.nationality}</td><td class="p-3"><div class="font-bold text-gray-800">${k.name}</div><div class="text-xs text-gray-400">${k.dob}</div></td><td class="p-3"><div>${lastH} cm</div><div class="text-xs text-green-600 font-bold">+${growth} cm</div></td><td class="p-3 text-sm text-gray-600">${d.managerName}</td><td class="p-3 text-center"><span class="risk-dot ${getRiskDotClass(d.riskLevel)}"></span></td><td class="p-3 text-center"><button onclick="openFamilyModal('${doc.id}')" class="bg-gray-200 text-gray-700 px-3 py-1 rounded text-xs hover:bg-gray-300 transition font-bold">查看詳情</button></td></tr>`;
                 });
-                
+
+                if (alertCount > 0) {
+                    alertSection.classList.remove('hidden');
+                    alertList.classList.remove('hidden');
+                } else {
+                    alertSection.classList.add('hidden');
+                }
+
                 Object.values(managerStats).forEach(stat => {
                     const rate = stat.total ? Math.round((stat.stable / stat.total) * 100) : 0;
                     teamDiv.innerHTML += `<div class="bg-white p-4 rounded border border-orange-100 flex justify-between items-center shadow-sm mb-2"><div><p class="font-bold text-lg text-gray-800">${stat.name}</p><p class="text-xs text-gray-500">管理 ${stat.total} 戶</p></div><div class="text-right"><p class="text-2xl font-bold ${rate < 60 ? 'text-riskRed' : 'text-riskGreen'}">${rate}%</p><p class="text-xs text-gray-400">穩定率</p></div></div>`;
                 });
-
-            }, err => log("班主任資料載入錯誤: " + err.message, "error"));
+             });
         }
         
         function getRiskClass(level) { if(level === 'red') return 'bg-red-100 text-riskRed'; if(level === 'yellow') return 'bg-yellow-100 text-riskYellow'; return 'bg-green-100 text-riskGreen'; }
