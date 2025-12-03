@@ -167,7 +167,10 @@
 
             <div class="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-4 border-l-4 border-primary">
                 <div><h2 class="text-2xl font-bold text-gray-800">我的管理家庭</h2><p class="text-gray-500 text-sm">親自負責的個案管理</p></div>
-                <button onclick="openFamilyModal()" class="bg-primary text-white px-5 py-2 rounded-full shadow hover:bg-orange-600 font-bold flex items-center gap-2"><i class="fa-solid fa-plus"></i> 新增家庭</button>
+                <div class="flex items-center gap-3">
+                    <input type="text" id="directorMySearch" placeholder="🔍 搜尋家庭..." class="border p-2 rounded text-sm w-32 md:w-48 focus:outline-none focus:border-primary shadow-inner" oninput="renderDirectorMyFamilyList()">
+                    <button onclick="openFamilyModal()" class="bg-primary text-white px-5 py-2 rounded-full shadow hover:bg-orange-600 font-bold flex items-center gap-2 whitespace-nowrap"><i class="fa-solid fa-plus"></i> 新增</button>
+                </div>
             </div>
             <div id="directorMyFamilyList" class="flex flex-col gap-3 mb-8"></div>
              <div class="bg-yellow-100 border-l-4 border-primary text-yellow-800 p-4 rounded shadow-sm"><p class="font-bold">班主任督導模式</p><p class="text-sm">僅供檢視旗下管理師績效與家庭狀況。</p></div>
@@ -179,9 +182,24 @@
         </div>
 
         <div id="managerDashboard" class="hidden space-y-6 animate-fade-in">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="bg-white p-5 rounded-lg shadow border-l-4 border-secondary">
+                    <h3 class="text-gray-500 text-sm font-bold">管理家庭數</h3>
+                    <p class="text-4xl font-bold text-gray-800 mt-2" id="managerTotalCount">0</p>
+                </div>
+                <div class="bg-white p-5 rounded-lg shadow border-l-4 border-primary">
+                    <h3 class="text-gray-500 text-sm font-bold">當月壽星</h3>
+                    <p class="text-4xl font-bold text-primary mt-2" id="managerBirthdayCount">0</p>
+                    <div id="managerBirthdayList" class="mt-2 text-sm text-gray-800 font-bold bg-yellow-50 p-1 rounded h-12 overflow-y-auto scrollbar-thin border border-yellow-100">無</div>
+                </div>
+            </div>
+
             <div class="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-4">
                 <div><h2 class="text-2xl font-bold text-gray-800">我的家庭管理</h2><p class="text-gray-500 text-sm">管理與紀錄孩童生長曲線</p></div>
-                <button onclick="openFamilyModal()" class="bg-primary text-white px-5 py-2 rounded-full shadow hover:bg-orange-600 font-bold flex items-center gap-2"><i class="fa-solid fa-plus"></i> 新增家庭</button>
+                <div class="flex items-center gap-3">
+                    <input type="text" id="managerSearch" placeholder="🔍 搜尋家庭..." class="border p-2 rounded text-sm w-32 md:w-48 focus:outline-none focus:border-primary shadow-inner" oninput="renderManagerFamilyList()">
+                    <button onclick="openFamilyModal()" class="bg-primary text-white px-5 py-2 rounded-full shadow hover:bg-orange-600 font-bold flex items-center gap-2 whitespace-nowrap"><i class="fa-solid fa-plus"></i> 新增</button>
+                </div>
             </div>
             <div id="managerFamilyList" class="flex flex-col gap-3"></div>
         </div>
@@ -264,8 +282,244 @@
             }
         }
 
-        // ... (initManagerDashboard, switchModalTab, addKidField, removeKidField, renderKidSelectOptions same as V17.1) ...
-        function initManagerDashboard() { const container = document.getElementById('managerFamilyList'); db.collection('families').where('managerId', '==', currentUser.uid).onSnapshot(snap => { container.innerHTML = snap.empty ? '<div class="col-span-3 text-center bg-white p-10 rounded border text-gray-500 shadow">尚無資料，請點擊上方按鈕新增。</div>' : ''; snap.forEach(doc => { const d = doc.data(); const kidNames = d.kids ? d.kids.map(k => k.name).join(', ') : '無孩童'; const k1 = d.kids && d.kids.length > 0 ? d.kids[0] : null; let lastInfo = '無紀錄'; let growthStr = ''; if (k1) { const latest = getLatestLog(k1); const lastH = latest ? latest.height : k1.initialHeight; const lastDate = latest ? (latest.date || latest.month) : '初始'; lastInfo = `最新: ${lastDate} / 身高 ${lastH}cm`; const growth = (Number(lastH) - Number(k1.initialHeight || 0)).toFixed(1); growthStr = `<span class="text-green-600 font-bold">(+${growth})</span>`; } const riskClass = getRiskClass(d.riskLevel); const riskLabel = getRiskLabel(d.riskLevel); const borderClass = d.riskLevel === 'red' ? 'border-riskRed' : (d.riskLevel === 'yellow' ? 'border-riskYellow' : 'border-riskGreen'); container.innerHTML += `<div class="bg-white p-4 rounded shadow border-l-4 ${borderClass} hover:shadow-lg transition flex flex-col md:flex-row items-center justify-between gap-4 w-full relative"><div class="flex-grow w-full md:w-auto cursor-pointer" onclick="openFamilyModal('${doc.id}', 'records')"><div class="flex items-center flex-wrap gap-2 mb-1"><h3 class="font-bold text-lg text-gray-800">${d.parentName}</h3><span class="text-xs px-2 py-1 bg-gray-100 rounded text-gray-600">${d.nationality}</span><span class="text-xs px-2 py-1 rounded font-bold ${riskClass}">${riskLabel}</span></div><div class="text-sm text-gray-600 flex flex-wrap gap-4 items-center"><span><i class="fa-solid fa-child text-accent"></i> ${kidNames}</span><span class="text-gray-500">${lastInfo} ${growthStr}</span></div></div><div class="flex items-center gap-3 w-full md:w-auto justify-end z-10"><div class="text-xs text-gray-500 bg-gray-50 p-2 rounded truncate max-w-[150px] hidden lg:block border border-gray-100" title="${d.statusReport || ''}"><i class="fa-solid fa-comment-dots"></i> ${d.statusReport || '無回報'}</div><button onclick="event.stopPropagation(); openFamilyModal('${doc.id}', 'basic');" class="bg-white border border-secondary text-black px-4 py-2 rounded hover:bg-secondary hover:text-white transition text-sm font-bold whitespace-nowrap flex items-center gap-1"><i class="fa-solid fa-pen-to-square"></i> 編輯資料</button><button onclick="event.stopPropagation(); deleteFamily('${doc.id}', '${d.parentName}')" class="text-red-400 hover:text-red-600 px-2 transition" title="刪除家庭"><i class="fa-solid fa-trash"></i></button></div></div>`; }); }); }
+        // --- Manager Dashboard Logic Updated ---
+        let managerFamiliesData = []; // Store raw data for search & sort
+
+        function initManagerDashboard() { 
+            const totalCountEl = document.getElementById('managerTotalCount');
+            const bdayCountEl = document.getElementById('managerBirthdayCount');
+            const bdayListEl = document.getElementById('managerBirthdayList');
+
+            db.collection('families').where('managerId', '==', currentUser.uid).onSnapshot(snap => { 
+                managerFamiliesData = [];
+                let bdayCount = 0;
+                let bdayNames = [];
+                const currentMonth = new Date().getMonth();
+
+                snap.forEach(doc => { 
+                    const d = doc.data(); 
+                    managerFamiliesData.push({ id: doc.id, ...d });
+
+                    // Stats
+                    if (d.kids) {
+                        d.kids.forEach(k => {
+                            if (k.dob) {
+                                const parts = k.dob.split('-');
+                                if (parts.length === 3 && (parseInt(parts[1]) - 1) === currentMonth) {
+                                    bdayCount++;
+                                    bdayNames.push(k.name);
+                                }
+                            }
+                        });
+                    }
+                });
+
+                // Update Stats
+                if(totalCountEl) totalCountEl.innerText = managerFamiliesData.length;
+                if(bdayCountEl) bdayCountEl.innerText = bdayCount;
+                if(bdayListEl) bdayListEl.innerText = bdayNames.length ? bdayNames.join(', ') : '無';
+
+                // Initial Render (will sort automatically)
+                renderManagerFamilyList();
+            }); 
+        }
+
+        function renderManagerFamilyList() {
+            const container = document.getElementById('managerFamilyList');
+            const searchTerm = document.getElementById('managerSearch').value.toLowerCase().trim();
+
+            // 1. Sort by joinDate descending (Newest first)
+            let filtered = [...managerFamiliesData].sort((a, b) => {
+                const dateA = a.joinDate || '';
+                const dateB = b.joinDate || '';
+                return dateB.localeCompare(dateA); // Descending
+            });
+
+            // 2. Filter by search term
+            if (searchTerm) {
+                filtered = filtered.filter(f => {
+                    const parent = (f.parentName || '').toLowerCase();
+                    const nation = (f.nationality || '').toLowerCase();
+                    const kidNames = f.kids ? f.kids.map(k => k.name.toLowerCase()).join(' ') : '';
+                    return parent.includes(searchTerm) || nation.includes(searchTerm) || kidNames.includes(searchTerm);
+                });
+            }
+
+            // 3. Render
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="col-span-3 text-center bg-white p-10 rounded border text-gray-500 shadow">沒有符合的資料</div>';
+                return;
+            }
+
+            let html = '';
+            filtered.forEach(d => {
+                const kidNames = d.kids ? d.kids.map(k => k.name).join(', ') : '無孩童';
+                const k1 = d.kids && d.kids.length > 0 ? d.kids[0] : null; 
+                let lastInfo = '無紀錄'; 
+                let growthStr = ''; 
+                if (k1) { 
+                    const latest = getLatestLog(k1); 
+                    const lastH = latest ? latest.height : k1.initialHeight; 
+                    const lastDate = latest ? (latest.date || latest.month) : '初始'; 
+                    lastInfo = `最新: ${lastDate} / 身高 ${lastH}cm`; 
+                    const growth = (Number(lastH) - Number(k1.initialHeight || 0)).toFixed(1); 
+                    growthStr = `<span class="text-green-600 font-bold">(+${growth})</span>`; 
+                } 
+                const riskClass = getRiskClass(d.riskLevel); 
+                const riskLabel = getRiskLabel(d.riskLevel); 
+                const borderClass = d.riskLevel === 'red' ? 'border-riskRed' : (d.riskLevel === 'yellow' ? 'border-riskYellow' : 'border-riskGreen'); 
+
+                html += `<div class="bg-white p-4 rounded shadow border-l-4 ${borderClass} hover:shadow-lg transition flex flex-col md:flex-row items-center justify-between gap-4 w-full relative"><div class="flex-grow w-full md:w-auto cursor-pointer" onclick="openFamilyModal('${d.id}', 'records')"><div class="flex items-center flex-wrap gap-2 mb-1"><h3 class="font-bold text-lg text-gray-800">${d.parentName}</h3><span class="text-xs px-2 py-1 bg-gray-100 rounded text-gray-600">${d.nationality}</span><span class="text-xs px-2 py-1 rounded font-bold ${riskClass}">${riskLabel}</span><span class="text-xs text-gray-400">加入: ${d.joinDate || '-'}</span></div><div class="text-sm text-gray-600 flex flex-wrap gap-4 items-center"><span><i class="fa-solid fa-child text-accent"></i> ${kidNames}</span><span class="text-gray-500">${lastInfo} ${growthStr}</span></div></div><div class="flex items-center gap-3 w-full md:w-auto justify-end z-10"><div class="text-xs text-gray-500 bg-gray-50 p-2 rounded truncate max-w-[150px] hidden lg:block border border-gray-100" title="${d.statusReport || ''}"><i class="fa-solid fa-comment-dots"></i> ${d.statusReport || '無回報'}</div><button onclick="event.stopPropagation(); openFamilyModal('${d.id}', 'basic');" class="bg-white border border-secondary text-black px-4 py-2 rounded hover:bg-secondary hover:text-white transition text-sm font-bold whitespace-nowrap flex items-center gap-1"><i class="fa-solid fa-pen-to-square"></i> 編輯資料</button><button onclick="event.stopPropagation(); deleteFamily('${d.id}', '${d.parentName}')" class="text-red-400 hover:text-red-600 px-2 transition" title="刪除家庭"><i class="fa-solid fa-trash"></i></button></div></div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // --- Director Dashboard Logic Updated ---
+        let directorMyFamiliesData = []; // Store raw data for Director's own families
+
+        async function initDirectorDashboard() {
+             const teamDiv = document.getElementById('directorTeamList'); 
+             const riskDiv = document.getElementById('directorRiskList'); 
+             const familyTableBody = document.getElementById('directorFamilyTable');
+
+             let myStagnantCases = [];
+             let teamStagnantCases = [];
+
+             function renderDirectorAlerts() {
+                const board = document.getElementById('directorHealthBoard');
+                const list = document.getElementById('directorStagnantList');
+                const allCases = [...myStagnantCases, ...teamStagnantCases];
+
+                list.innerHTML = '';
+                if (allCases.length > 0) {
+                    board.classList.remove('hidden');
+                    document.getElementById('directorHealthTitle').innerText = "警示：加入滿4個月仍未長高";
+                    
+                    allCases.forEach(item => {
+                         list.innerHTML += `<div onclick="openFamilyModal('${item.id}')" class="cursor-pointer hover:bg-gray-50 transition bg-white p-2 rounded shadow-sm border border-red-200 flex justify-between items-center">
+                            <span class="font-bold text-gray-800">${item.kidName} <i class="fa-solid fa-arrow-up-right-from-square text-xs text-gray-400 ml-1"></i></span> 
+                            <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded border border-gray-200">${item.managerName}</span>
+                         </div>`;
+                    });
+                } else {
+                    board.classList.add('hidden');
+                }
+             }
+
+             // 1. Personal Families (Director as Manager)
+             db.collection('families').where('managerId', '==', currentUser.uid).onSnapshot(snap => {
+                directorMyFamiliesData = [];
+                myStagnantCases = [];
+
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    directorMyFamiliesData.push({ id: doc.id, ...d });
+                    
+                    if (d.kids) d.kids.forEach(kid => {
+                        if (checkGrowthStagnation(kid, d.joinDate)) {
+                            myStagnantCases.push({ kidName: kid.name, managerName: '我 (班主任)', id: doc.id });
+                        }
+                    });
+                });
+                renderDirectorMyFamilyList(); // Render with sort & search
+                renderDirectorAlerts(); 
+            });
+
+             // 2. Team Families
+             const teamSnap = await db.collection('users').where('directorId', '==', currentUser.uid).get();
+             const teamIds = teamSnap.docs.map(d => d.id);
+             const queryIds = teamIds.length ? teamIds : ['dummy_query_id'];
+
+             db.collection('families').where('managerId', 'in', queryIds).onSnapshot(fSnap => {
+                teamDiv.innerHTML = ''; riskDiv.innerHTML = ''; familyTableBody.innerHTML = '';
+                teamStagnantCases = []; 
+                let managerStats = {};
+                
+                fSnap.forEach(doc => {
+                    const d = doc.data();
+                    if(d.kids) d.kids.forEach(kid => {
+                        if(checkGrowthStagnation(kid, d.joinDate)) {
+                             teamStagnantCases.push({ kidName: kid.name, managerName: d.managerName || '未知', id: doc.id });
+                        }
+                    });
+                    
+                    const k = d.kids && d.kids.length > 0 ? d.kids[0] : { name: '-', dob: '-', initialHeight: 0 };
+                    const latest = getLatestLog(k);
+                    const lastH = latest ? latest.height : k.initialHeight;
+                    const growth = (Number(lastH) - Number(k.initialHeight)).toFixed(1);
+                    const mId = d.managerId;
+                    const mName = d.managerName || '未分配';
+
+                    if (!managerStats[mId]) managerStats[mId] = { name: mName, total: 0, stable: 0 };
+                    managerStats[mId].total++;
+                    if (d.riskLevel === 'green') managerStats[mId].stable++;
+
+                    if(d.riskLevel === 'red' || d.riskLevel === 'yellow') { 
+                        riskDiv.innerHTML += `<div onclick="openFamilyModal('${doc.id}')" class="cursor-pointer hover:opacity-80 transition p-3 border-l-4 ${d.riskLevel==='red'?'border-riskRed bg-red-50':'border-riskYellow bg-yellow-50'} rounded shadow-sm flex justify-between items-center mb-2"><div><p class="font-bold text-gray-800">${d.parentName} <i class="fa-solid fa-arrow-up-right-from-square text-gray-400 text-xs ml-2"></i></p><p class="text-xs text-gray-500">負責人: ${d.managerName}</p></div><div class="text-right"><span class="text-xs font-bold px-2 py-1 bg-white rounded shadow-sm border border-gray-200">${d.riskLevel==='red'?'高風險':'觀察'}</span></div></div>`; 
+                    }
+                    
+                    familyTableBody.innerHTML += `<tr class="hover:bg-gray-50 transition border-b border-gray-100"><td class="p-3 font-bold text-gray-600">${d.nationality}</td><td class="p-3"><div class="font-bold text-gray-800">${k.name}</div><div class="text-xs text-gray-400">${k.dob}</div></td><td class="p-3"><div>${lastH} cm</div><div class="text-xs text-green-600 font-bold">+${growth} cm</div></td><td class="p-3 text-sm text-gray-600">${d.managerName}</td><td class="p-3 text-center"><span class="risk-dot ${getRiskDotClass(d.riskLevel)}"></span></td><td class="p-3 text-center"><button onclick="openFamilyModal('${doc.id}')" class="bg-gray-200 text-gray-700 px-3 py-1 rounded text-xs hover:bg-gray-300 transition font-bold">查看詳情</button></td></tr>`;
+                });
+
+                renderDirectorAlerts();
+
+                Object.values(managerStats).forEach(stat => {
+                    const rate = stat.total ? Math.round((stat.stable / stat.total) * 100) : 0;
+                    teamDiv.innerHTML += `<div class="bg-white p-4 rounded border border-orange-100 flex justify-between items-center shadow-sm mb-2"><div><p class="font-bold text-lg text-gray-800">${stat.name}</p><p class="text-xs text-gray-500">管理 ${stat.total} 戶</p></div><div class="text-right"><p class="text-2xl font-bold ${rate < 60 ? 'text-riskRed' : 'text-riskGreen'}">${rate}%</p><p class="text-xs text-gray-400">穩定率</p></div></div>`;
+                });
+             });
+        }
+
+        function renderDirectorMyFamilyList() {
+            const container = document.getElementById('directorMyFamilyList');
+            const searchTerm = document.getElementById('directorMySearch').value.toLowerCase().trim();
+
+            // 1. Sort by joinDate descending
+            let filtered = [...directorMyFamiliesData].sort((a, b) => {
+                const dateA = a.joinDate || '';
+                const dateB = b.joinDate || '';
+                return dateB.localeCompare(dateA); 
+            });
+
+            // 2. Filter by search term
+            if (searchTerm) {
+                filtered = filtered.filter(f => {
+                    const parent = (f.parentName || '').toLowerCase();
+                    const nation = (f.nationality || '').toLowerCase();
+                    const kidNames = f.kids ? f.kids.map(k => k.name.toLowerCase()).join(' ') : '';
+                    return parent.includes(searchTerm) || nation.includes(searchTerm) || kidNames.includes(searchTerm);
+                });
+            }
+
+            // 3. Render
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="col-span-3 text-center bg-white p-6 rounded border text-gray-500">沒有符合的資料</div>';
+                return;
+            }
+
+            let html = '';
+            filtered.forEach(d => {
+                const kidNames = d.kids ? d.kids.map(k => k.name).join(', ') : '';
+                const k1 = d.kids && d.kids.length > 0 ? d.kids[0] : null;
+                let lastInfo = '無紀錄';
+                let growthStr = '';
+                if (k1) {
+                    const latest = getLatestLog(k1);
+                    const lastH = latest ? latest.height : k1.initialHeight;
+                    const lastDate = latest ? (latest.date || latest.month) : '初始';
+                    lastInfo = `最新: ${lastDate} / 身高 ${lastH}cm`;
+                    const growth = (Number(lastH) - Number(k1.initialHeight)).toFixed(1);
+                    growthStr = `<span class="text-green-600 font-bold">(+${growth})</span>`;
+                }
+                const riskClass = getRiskClass(d.riskLevel);
+                const riskLabel = getRiskLabel(d.riskLevel);
+                const borderClass = d.riskLevel === 'red' ? 'border-riskRed' : (d.riskLevel === 'yellow' ? 'border-riskYellow' : 'border-riskGreen');
+
+                html += `<div class="bg-white p-4 rounded shadow border-l-4 ${borderClass} hover:shadow-lg transition flex flex-col md:flex-row items-center justify-between gap-4 w-full relative"><div class="flex-grow w-full md:w-auto cursor-pointer" onclick="openFamilyModal('${d.id}', 'records')"><div class="flex items-center flex-wrap gap-2 mb-1"><h3 class="font-bold text-lg text-gray-800">${d.parentName}</h3><span class="text-xs px-2 py-1 bg-gray-100 rounded text-gray-600">${d.nationality}</span><span class="text-xs px-2 py-1 rounded font-bold ${riskClass}">${riskLabel}</span><span class="text-xs text-gray-400">加入: ${d.joinDate || '-'}</span></div><div class="text-sm text-gray-600 flex flex-wrap gap-4 items-center"><span><i class="fa-solid fa-child text-accent"></i> ${kidNames}</span><span class="text-gray-500">${lastInfo} ${growthStr}</span></div></div><div class="flex items-center gap-3 w-full md:w-auto justify-end z-10"><button onclick="event.stopPropagation(); openFamilyModal('${d.id}', 'basic');" class="bg-white border border-secondary text-black px-4 py-2 rounded hover:bg-secondary hover:text-white transition text-sm font-bold whitespace-nowrap flex items-center gap-1"><i class="fa-solid fa-pen-to-square"></i> 編輯資料</button><button onclick="event.stopPropagation(); deleteFamily('${d.id}', '${d.parentName}')" class="text-red-400 hover:text-red-600 px-2 transition" title="刪除家庭"><i class="fa-solid fa-trash"></i></button></div></div>`;
+            });
+            container.innerHTML = html;
+        }
+        
         function switchModalTab(tabName) { document.getElementById('content-basic').classList.toggle('hidden', tabName !== 'basic'); document.getElementById('content-records').classList.toggle('hidden', tabName !== 'records'); const tBasic = document.getElementById('tab-basic'), tRec = document.getElementById('tab-records'); const footerBtn = document.getElementById('modalFooterBtn'); if(tabName === 'basic') { tBasic.classList.add('text-primary', 'border-b-2', 'border-primary'); tBasic.classList.remove('text-gray-500'); tRec.classList.remove('text-primary', 'border-b-2', 'border-primary'); tRec.classList.add('text-gray-500'); if(footerBtn) footerBtn.style.display = 'flex'; } else { tRec.classList.add('text-primary', 'border-b-2', 'border-primary'); tRec.classList.remove('text-gray-500'); tBasic.classList.remove('text-primary', 'border-b-2', 'border-primary'); tBasic.classList.add('text-gray-500'); if(footerBtn) footerBtn.style.display = 'none'; renderKidSelectOptions(); } }
         function addKidField(data = null) { const container = document.getElementById('kidsContainer'); const kidHtml = `<div class="grid grid-cols-1 md:grid-cols-6 gap-2 bg-white p-2 rounded border border-gray-200 mb-2 kid-entry items-end"><div class="md:col-span-1"><label class="text-[10px] text-gray-400">姓名</label><input type="text" class="kid-name w-full border p-1 text-sm rounded" value="${data ? data.name : ''}" required></div><div class="md:col-span-1"><label class="text-[10px] text-gray-400">生日</label><input type="date" class="kid-dob w-full border p-1 text-sm rounded" value="${data ? data.dob : ''}" max="9999-12-31" required></div><div class="md:col-span-1"><label class="text-[10px] text-gray-400">初始身高</label><input type="number" step="0.1" class="kid-h w-full border p-1 text-sm rounded" value="${data ? data.initialHeight : ''}" placeholder="cm" required></div><div class="md:col-span-1"><label class="text-[10px] text-gray-400">初始體重</label><input type="number" step="0.1" class="kid-w w-full border p-1 text-sm rounded" value="${data ? data.initialWeight : ''}" placeholder="kg" required></div><div class="md:col-span-1"><label class="text-[10px] text-gray-400">骨齡</label><input type="number" step="0.1" class="kid-bone w-full border p-1 text-sm rounded" value="${data ? data.boneAge || '' : ''}"></div><div class="md:col-span-1 text-right"><button type="button" onclick="removeKidField(this)" class="text-red-500 hover:text-red-700" title="刪除 (可復原)"><i class="fa-solid fa-trash"></i></button></div></div>`; container.insertAdjacentHTML('beforeend', kidHtml); }
         function removeKidField(btn) { const row = btn.closest('.kid-entry'); if (row.classList.contains('marked-for-deletion')) { row.classList.remove('marked-for-deletion'); btn.innerHTML = '<i class="fa-solid fa-trash"></i>'; btn.classList.replace('text-green-600', 'text-red-500'); } else { row.classList.add('marked-for-deletion'); btn.innerHTML = '<i class="fa-solid fa-rotate-left"></i>'; btn.classList.replace('text-red-500', 'text-green-600'); } }
@@ -383,306 +637,6 @@
         async function saveFamily(e) { e.preventDefault(); const id = document.getElementById('familyId').value; const baseData = { parentName: document.getElementById('parentName').value, nationality: document.getElementById('nationality').value, joinDate: document.getElementById('joinDate').value, familyNote: document.getElementById('familyNote').value, riskLevel: document.querySelector('input[name="risk"]:checked').value, statusReport: document.getElementById('statusReport').value, isRenewal: document.getElementById('isRenewal').checked, updatedAt: new Date() }; const kidDivs = document.querySelectorAll('.kid-entry:not(.marked-for-deletion)'); const kidsData = []; kidDivs.forEach((div, idx) => { const name = div.querySelector('.kid-name').value; const dob = div.querySelector('.kid-dob').value; const h = div.querySelector('.kid-h').value; const w = div.querySelector('.kid-w').value; const bone = div.querySelector('.kid-bone').value; let existingLogs = []; if (currentEditingFamily && currentEditingFamily.kids) { const match = currentEditingFamily.kids.find(k => k.name === name && k.dob === dob); if(match) existingLogs = match.logs || []; } kidsData.push({ name: name, dob: dob, initialHeight: h, initialWeight: w, boneAge: bone, logs: existingLogs }); }); baseData.kids = kidsData; try { if (id) { await db.collection('families').doc(id).update(baseData); } else { baseData.managerId = currentUser.uid; baseData.managerName = userData.name; baseData.createdAt = new Date(); await db.collection('families').add(baseData); } closeFamilyModal(); } catch (err) { alert("儲存失敗: " + err.message); } }
         async function assignDirector(managerId, directorId) { const directorName = directorId ? document.querySelector(`#dir_opt_${managerId}_${directorId}`).innerText : null; try { await db.collection('users').doc(managerId).update({ directorId: directorId || null, directorName: directorName || null }); alert("班主任分配更新成功！"); } catch (e) { alert("分配失敗: " + e.message); } }
 
-        async function initOwnerDashboard() {
-            let families = [];
-            db.collection('families').onSnapshot(snap => {
-                families = []; snap.forEach(d => { if(d.data().kids && d.data().kids.length > 0) families.push({id: d.id, ...d.data()}); });
-                updateOwnerStats(families); updateCharts(families);
-            }, err => log("Error: " + err.message, "error"));
-            
-            db.collection('users').onSnapshot(snap => {
-                const div = document.getElementById('staffList'); div.innerHTML = ''; allStaffCache = [];
-                const directors = []; const managers = [];
-                snap.forEach(doc => {
-                    const u = doc.data();
-                    if(u.role === 'director') directors.push({id: doc.id, name: u.name});
-                    if(u.role === 'manager') managers.push({id: doc.id, ...u});
-                    if(u.role !== 'owner') allStaffCache.push({id: doc.id, name: u.name});
-                });
-                managerDirectorMap = {};
-                managers.forEach(m => { if(m.id) managerDirectorMap[m.id] = m.directorName; });
-                if(families.length > 0) filterOwnerTable('all', null, families);
-                
-                managers.forEach(m => {
-                    let dirOptions = `<option value="">未分配</option>`;
-                    directors.forEach(d => { const selected = m.directorId === d.id ? 'selected' : ''; dirOptions += `<option id="dir_opt_${m.id}_${d.id}" value="${d.id}" ${selected}>${d.name}</option>`; });
-                    const myFamilies = families.filter(f => f.managerId === m.id);
-                    let avgHeight = 0;
-                    if (myFamilies.length > 0) { 
-                        let totalH = 0; let count = 0;
-                        myFamilies.forEach(f => { 
-                            if(f.kids) f.kids.forEach(k => {
-                                const latest = getLatestLog(k);
-                                const h = latest ? latest.height : k.initialHeight; 
-                                totalH += Number(h); count++;
-                            });
-                        }); 
-                        avgHeight = count ? (totalH / count).toFixed(1) : 0; 
-                    }
-                    div.innerHTML += `
-                    <div class="bg-white p-4 rounded border shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-                        <div class="w-full md:w-1/4">
-                            <div class="flex items-center gap-2">
-                                <p class="font-bold text-gray-800 text-lg">${m.name}</p>
-                                <span class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200">管理師</span>
-                            </div>
-                            <p class="text-xs text-gray-400">${m.username}</p>
-                            <p class="text-sm mt-1 text-gray-600">平均身高: <b class="text-primary">${avgHeight}</b> cm</p>
-                        </div>
-                        
-                        <div class="w-full md:w-1/3 flex items-center gap-2 bg-gray-50 p-2 rounded border border-gray-100">
-                            <label class="text-xs text-gray-500 font-bold whitespace-nowrap">督導:</label>
-                            <select onchange="assignDirector('${m.id}', this.value)" class="text-sm border-none bg-transparent w-full focus:ring-0 cursor-pointer text-gray-700 font-bold outline-none">
-                                ${dirOptions}
-                            </select>
-                        </div>
-
-                        <div class="w-full md:w-auto flex gap-2 justify-end">
-                            <button onclick="openTransferModal('${m.id}','${m.name}')" class="text-sm bg-blue-50 text-blue-600 px-3 py-2 rounded hover:bg-blue-100 font-bold transition whitespace-nowrap"><i class="fa-solid fa-right-left"></i> 移交</button>
-                            <button onclick="changeRole('${m.id}', 'director')" class="text-sm bg-green-50 text-green-600 px-3 py-2 rounded hover:bg-green-100 font-bold transition whitespace-nowrap">升遷</button>
-                            <button onclick="deleteStaff('${m.id}')" class="text-sm bg-red-50 text-red-600 px-3 py-2 rounded hover:bg-red-100 font-bold transition whitespace-nowrap"><i class="fa-solid fa-trash"></i></button>
-                        </div>
-                    </div>`;
-                });
-
-                directors.forEach(d => { 
-                    div.innerHTML += `
-                    <div class="bg-yellow-50 p-4 rounded border border-yellow-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-                        <div class="w-full md:w-1/4">
-                            <div class="flex items-center gap-2">
-                                <p class="font-bold text-gray-800 text-lg">${d.name} <i class="fa-solid fa-star text-yellow-500 text-xs"></i></p>
-                                <span class="text-xs px-2 py-0.5 rounded bg-primary text-white">班主任</span>
-                            </div>
-                        </div>
-                        <div class="w-full md:w-1/3 text-center text-xs text-gray-500 italic">
-                            (班主任管理權限)
-                        </div>
-                        <div class="w-full md:w-auto flex gap-2 justify-end">
-                            <button onclick="changeRole('${d.id}', 'manager')" class="text-sm bg-gray-200 text-gray-700 px-3 py-2 rounded hover:bg-gray-300 font-bold transition whitespace-nowrap">降職</button>
-                            <button onclick="deleteStaff('${d.id}')" class="text-sm bg-red-50 text-red-600 px-3 py-2 rounded hover:bg-red-100 font-bold transition whitespace-nowrap"><i class="fa-solid fa-trash"></i></button>
-                        </div>
-                    </div>`; 
-                });
-            }, err => log("老闆員工載入錯誤: " + err.message, "error"));
-        }
-        
-        async function changeRole(uid, newRole) { if(confirm(`確定要變更權限為 ${newRole === 'director' ? '班主任' : '管理師'} 嗎？`)) { try { await db.collection('users').doc(uid).update({ role: newRole }); alert("權限變更成功！"); } catch (e) { alert("變更失敗: " + e.message); } } }
-        async function deleteStaff(uid) { if(confirm("確定移除此員工？")) { try { await db.collection('users').doc(uid).delete(); alert("員工已移除"); } catch (e) { alert("移除失敗: " + e.message); } } }
-
-        function updateOwnerStats(families) {
-            document.getElementById('ownerTotalFamilies').innerText = families.length;
-            let stats = { total: 0, risk: 0, totalGrowth: 0, kidCount: 0, bday: 0 };
-            const todayMonth = new Date().getMonth(); let bdayNames = [];
-            const nations = [...new Set(families.map(f => f.nationality))];
-            const nationDiv = document.getElementById('nationFilters'); nationDiv.innerHTML = '';
-            nations.forEach(n => { nationDiv.innerHTML += `<button onclick="filterOwnerTable('nation', '${n}', window.currentFamilies)" class="bg-secondary text-black px-3 py-1 rounded text-sm whitespace-nowrap hover:opacity-80 transition">${n}</button>`; });
-            window.currentFamilies = families;
-            
-            const alertList = document.getElementById('ownerStagnantList');
-            const alertSection = document.getElementById('ownerHealthBoard');
-            alertList.innerHTML = '';
-            let alertCount = 0;
-
-            families.forEach(f => {
-                stats.total++;
-                if(f.riskLevel === 'red') stats.risk++;
-                if (f.kids) {
-                    f.kids.forEach(k => {
-                        if (k.dob) {
-                            const parts = k.dob.split('-');
-                            if (parts.length === 3) {
-                                const bMonth = parseInt(parts[1]) - 1; 
-                                if (bMonth === todayMonth) { stats.bday++; bdayNames.push(`${k.name} (${f.managerName || '未分配'})`); }
-                            }
-                        }
-                        const latest = getLatestLog(k);
-                        const currentH = latest ? latest.height : k.initialHeight;
-                        const grow = Number(currentH) - Number(k.initialHeight || 0);
-                        stats.totalGrowth += grow;
-                        stats.kidCount++;
-
-                        if(checkGrowthStagnation(k, f.joinDate)) {
-                            alertCount++;
-                            alertList.innerHTML += `<div class="bg-white p-2 rounded shadow-sm border border-red-200 flex justify-between"><span>${k.name}</span> <span class="text-xs text-gray-500">${f.managerName}</span></div>`;
-                        }
-                    });
-                }
-            });
-            
-            // 修正邏輯：有警示才顯示紅色看板，否則完全隱藏
-            if (alertCount > 0) {
-                alertSection.classList.remove('hidden');
-                document.getElementById('ownerHealthTitle').innerText = "警示：加入滿4個月仍未長高"; // 動態設定標題
-                alertList.classList.remove('hidden');
-            } else {
-                alertSection.classList.add('hidden');
-            }
-
-            document.getElementById('ownerTotalFamilies').innerText = stats.total;
-            document.getElementById('ownerRiskCount').innerText = stats.risk;
-            document.getElementById('ownerBirthdayCount').innerText = stats.bday;
-            document.getElementById('ownerBirthdayList').innerText = bdayNames.length ? bdayNames.join(', ') : '無';
-            filterOwnerTable('all', null, families); 
-        }
-
-        let managerChartInstance = null, nationChartInstance = null;
-        function updateCharts(families) {
-            const managerData = {}; families.forEach(f => { const mName = f.managerName || '未知'; if(!managerData[mName]) managerData[mName] = { totalH: 0, count: 0 }; if(f.kids) f.kids.forEach(k => { const latest = getLatestLog(k); const h = latest ? latest.height : k.initialHeight; managerData[mName].totalH += Number(h); managerData[mName].count++; }); }); const mLabels = Object.keys(managerData); const mValues = mLabels.map(name => (managerData[name].totalH / managerData[name].count).toFixed(1));
-            const nationData = {}; families.forEach(f => { const nat = f.nationality || '未知'; if(!nationData[nat]) nationData[nat] = { totalGrow: 0, count: 0 }; if(f.kids) f.kids.forEach(k => { const latest = getLatestLog(k); const currentH = latest ? latest.height : k.initialHeight; const grow = Number(currentH) - Number(k.initialHeight || 0); nationData[nat].totalGrow += grow; nationData[nat].count++; }); }); const nLabels = Object.keys(nationData); const nValues = nLabels.map(nat => (nationData[nat].totalGrow / nationData[nat].count).toFixed(1));
-            if(managerChartInstance) managerChartInstance.destroy(); const ctxM = document.getElementById('managerChart').getContext('2d'); managerChartInstance = new Chart(ctxM, { type: 'bar', data: { labels: mLabels, datasets: [{ label: '平均身高 (cm)', data: mValues, backgroundColor: 'rgba(255, 152, 0, 0.6)', borderColor: 'rgba(255, 152, 0, 1)', borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: false } } } });
-            if(nationChartInstance) nationChartInstance.destroy(); const ctxN = document.getElementById('nationChart').getContext('2d'); nationChartInstance = new Chart(ctxN, { type: 'bar', data: { labels: nLabels, datasets: [{ label: '平均生長幅度 (cm)', data: nValues, backgroundColor: 'rgba(160, 82, 45, 0.6)', borderColor: 'rgba(160, 82, 45, 1)', borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } } });
-        }
-        function openTransferModal(sid, sname) { transferSourceId = sid; document.getElementById('transferModalTitle').innerText = `移交 ${sname} 的家庭`; const sel = document.getElementById('targetManagerSelect'); sel.innerHTML = '<option>請選擇</option>'; allStaffCache.filter(s=>s.id!==sid).forEach(s => sel.innerHTML += `<option value="${s.id}">${s.name}</option>`); document.getElementById('transferModal').classList.remove('hidden'); }
-        async function confirmTransfer() { const tid = document.getElementById('targetManagerSelect').value; if(!tid) return; const tName = document.getElementById('targetManagerSelect').options[document.getElementById('targetManagerSelect').selectedIndex].text; const batch = db.batch(); const snap = await db.collection('families').where('managerId','==',transferSourceId).get(); snap.forEach(doc => batch.update(doc.ref, {managerId: tid, managerName: tName})); await batch.commit(); alert('移交成功'); document.getElementById('transferModal').classList.add('hidden'); }
-        function filterOwnerTable(type, val, families) { const tbody = document.getElementById('ownerFamilyTable'); tbody.innerHTML = ''; let filtered = families || window.currentFamilies || []; if (type === 'risk') filtered = filtered.filter(f => f.riskLevel === 'red'); if (type === 'nation') filtered = filtered.filter(f => f.nationality === val); if (type === 'search') { const term = document.getElementById('familySearch').value.toLowerCase(); filtered = filtered.filter(f => { const parent = f.parentName.toLowerCase(); const nation = f.nationality.toLowerCase(); const kidNames = f.kids ? f.kids.map(k => k.name.toLowerCase()).join(' ') : ''; return parent.includes(term) || nation.includes(term) || kidNames.includes(term); }); } filtered.forEach(f => { const k = f.kids && f.kids.length > 0 ? f.kids[0] : { name: '-', dob: '-' }; const latest = getLatestLog(k); const currentH = latest ? latest.height : k.initialHeight || 0; const grow = (Number(currentH) - Number(k.initialHeight || 0)).toFixed(1); const directorName = (f.managerId && managerDirectorMap[f.managerId]) ? managerDirectorMap[f.managerId] : '-'; tbody.innerHTML += `<tr class="hover:bg-gray-50 transition border-b border-gray-100"><td class="p-3 font-bold text-gray-600">${f.nationality}</td><td class="p-3 font-bold text-gray-800">${f.parentName}</td><td class="p-3"><div class="font-bold text-gray-800">${k.name}</div><div class="text-xs text-gray-400">${k.dob}</div></td><td class="p-3"><div>${currentH} cm</div><div class="text-xs text-riskGreen font-bold">+${grow} cm</div></td><td class="p-3 text-sm text-gray-600">${f.managerName}</td><td class="p-3 text-sm text-primary font-bold">${directorName}</td><td class="p-3 text-center"><span class="risk-dot ${getRiskDotClass(f.riskLevel)}"></span></td><td class="p-3 text-center"><button onclick="openFamilyModal('${f.id}')" class="bg-secondary text-black px-3 py-1 rounded text-xs hover:opacity-80 transition font-bold">查看</button></td></tr>`; }); }
-        
-        // ★ Update Director Dashboard to use health board logic with merged data ★
-        async function initDirectorDashboard() {
-             const myContainer = document.getElementById('directorMyFamilyList');
-             const teamDiv = document.getElementById('directorTeamList'); 
-             const riskDiv = document.getElementById('directorRiskList'); 
-             const familyTableBody = document.getElementById('directorFamilyTable');
-
-             // 暫存陣列，用於合併個人與團隊的停滯名單
-             let myStagnantCases = [];
-             let teamStagnantCases = [];
-
-             // 更新警示看板的內部函數
-             function renderDirectorAlerts() {
-                const board = document.getElementById('directorHealthBoard');
-                const list = document.getElementById('directorStagnantList');
-                // 合併兩個陣列
-                const allCases = [...myStagnantCases, ...teamStagnantCases];
-
-                list.innerHTML = '';
-                if (allCases.length > 0) {
-                    board.classList.remove('hidden');
-                    document.getElementById('directorHealthTitle').innerText = "警示：加入滿4個月仍未長高";
-                    
-                    allCases.forEach(item => {
-                         list.innerHTML += `<div class="bg-white p-2 rounded shadow-sm border border-red-200 flex justify-between items-center">
-                            <span class="font-bold text-gray-800">${item.kidName}</span> 
-                            <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded border border-gray-200">${item.managerName}</span>
-                         </div>`;
-                    });
-                } else {
-                    board.classList.add('hidden');
-                }
-             }
-
-             // 1. 監聽【個人管理】的家庭
-             db.collection('families').where('managerId', '==', currentUser.uid).onSnapshot(snap => {
-                myContainer.innerHTML = snap.empty ? '<div class="col-span-3 text-center bg-white p-6 rounded border text-gray-500">您目前沒有親自管理的家庭</div>' : '';
-                myStagnantCases = []; // 清空重算
-
-                snap.forEach(doc => {
-                    const d = doc.data();
-                    
-                    // 檢查生長停滯 (個人)
-                    if (d.kids) d.kids.forEach(kid => {
-                        if (checkGrowthStagnation(kid, d.joinDate)) {
-                            myStagnantCases.push({ kidName: kid.name, managerName: '我 (班主任)' });
-                        }
-                    });
-
-                    // 渲染卡片 (省略細節，與之前相同)
-                    const kidNames = d.kids ? d.kids.map(k => k.name).join(', ') : '';
-                    const k1 = d.kids && d.kids.length > 0 ? d.kids[0] : null;
-                    let lastInfo = '無紀錄';
-                    let growthStr = '';
-                    if (k1) {
-                        const latest = getLatestLog(k1);
-                        const lastH = latest ? latest.height : k1.initialHeight;
-                        const lastDate = latest ? (latest.date || latest.month) : '初始';
-                        lastInfo = `最新: ${lastDate} / 身高 ${lastH}cm`;
-                        const growth = (Number(lastH) - Number(k1.initialHeight)).toFixed(1);
-                        growthStr = `<span class="text-green-600 font-bold">(+${growth})</span>`;
-                    }
-                    const riskClass = getRiskClass(d.riskLevel);
-                    const riskLabel = getRiskLabel(d.riskLevel);
-                    const borderClass = d.riskLevel === 'red' ? 'border-riskRed' : (d.riskLevel === 'yellow' ? 'border-riskYellow' : 'border-riskGreen');
-
-                    myContainer.innerHTML += `
-                        <div class="bg-white p-4 rounded shadow border-l-4 ${borderClass} hover:shadow-lg transition flex flex-col md:flex-row items-center justify-between gap-4 w-full relative">
-                            <div class="flex-grow w-full md:w-auto cursor-pointer" onclick="openFamilyModal('${doc.id}', 'records')">
-                                <div class="flex items-center flex-wrap gap-2 mb-1">
-                                    <h3 class="font-bold text-lg text-gray-800">${d.parentName}</h3>
-                                    <span class="text-xs px-2 py-1 bg-gray-100 rounded text-gray-600">${d.nationality}</span>
-                                    <span class="text-xs px-2 py-1 rounded font-bold ${riskClass}">${riskLabel}</span>
-                                </div>
-                                <div class="text-sm text-gray-600 flex flex-wrap gap-4 items-center">
-                                    <span><i class="fa-solid fa-child text-accent"></i> ${kidNames}</span>
-                                    <span class="text-gray-500">${lastInfo} ${growthStr}</span>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-3 w-full md:w-auto justify-end z-10">
-                                <button onclick="event.stopPropagation(); openFamilyModal('${doc.id}', 'basic');" class="bg-white border border-secondary text-black px-4 py-2 rounded hover:bg-secondary hover:text-white transition text-sm font-bold whitespace-nowrap flex items-center gap-1">
-                                    <i class="fa-solid fa-pen-to-square"></i> 編輯資料
-                                </button>
-                                <button onclick="event.stopPropagation(); deleteFamily('${doc.id}', '${d.parentName}')" class="text-red-400 hover:text-red-600 px-2 transition" title="刪除家庭">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </div>
-                        </div>`;
-                });
-                renderDirectorAlerts(); // 每次數據變動都重新渲染警示
-            });
-
-             // 2. 監聽【團隊督導】的家庭
-             log('正在載入團隊名單...', 'info');
-             const teamSnap = await db.collection('users').where('directorId', '==', currentUser.uid).get();
-             const teamIds = teamSnap.docs.map(d => d.id);
-             log(`找到 ${teamIds.length} 位下屬管理師`, 'info');
-             
-             // 如果沒有下屬，給一個 dummy ID 避免報錯
-             const queryIds = teamIds.length ? teamIds : ['dummy_query_id'];
-
-             db.collection('families').where('managerId', 'in', queryIds).onSnapshot(fSnap => {
-                teamDiv.innerHTML = ''; riskDiv.innerHTML = ''; familyTableBody.innerHTML = '';
-                teamStagnantCases = []; // 清空重算
-                let managerStats = {};
-                
-                if(fSnap.empty) log('下屬目前沒有管理任何家庭', 'warn');
-
-                fSnap.forEach(doc => {
-                    const d = doc.data();
-                    
-                    // 檢查生長停滯 (團隊)
-                    if(d.kids) d.kids.forEach(kid => {
-                        if(checkGrowthStagnation(kid, d.joinDate)) {
-                             teamStagnantCases.push({ kidName: kid.name, managerName: d.managerName || '未知' });
-                        }
-                    });
-                    
-                    // (渲染團隊數據與表格，與之前邏輯相同)
-                    const k = d.kids && d.kids.length > 0 ? d.kids[0] : { name: '-', dob: '-', initialHeight: 0 };
-                    const latest = getLatestLog(k);
-                    const lastH = latest ? latest.height : k.initialHeight;
-                    const growth = (Number(lastH) - Number(k.initialHeight)).toFixed(1);
-                    const mId = d.managerId;
-                    const mName = d.managerName || '未分配';
-
-                    if (!managerStats[mId]) managerStats[mId] = { name: mName, total: 0, stable: 0 };
-                    managerStats[mId].total++;
-                    if (d.riskLevel === 'green') managerStats[mId].stable++;
-
-                    if(d.riskLevel === 'red' || d.riskLevel === 'yellow') { 
-                        riskDiv.innerHTML += `<div class="p-3 border-l-4 ${d.riskLevel==='red'?'border-riskRed bg-red-50':'border-riskYellow bg-yellow-50'} rounded shadow-sm flex justify-between items-center mb-2"><div><p class="font-bold text-gray-800">${d.parentName}</p><p class="text-xs text-gray-500">負責人: ${d.managerName}</p></div><div class="text-right"><span class="text-xs font-bold px-2 py-1 bg-white rounded shadow-sm border border-gray-200">${d.riskLevel==='red'?'高風險':'觀察'}</span></div></div>`; 
-                    }
-                    
-                    familyTableBody.innerHTML += `<tr class="hover:bg-gray-50 transition border-b border-gray-100"><td class="p-3 font-bold text-gray-600">${d.nationality}</td><td class="p-3"><div class="font-bold text-gray-800">${k.name}</div><div class="text-xs text-gray-400">${k.dob}</div></td><td class="p-3"><div>${lastH} cm</div><div class="text-xs text-green-600 font-bold">+${growth} cm</div></td><td class="p-3 text-sm text-gray-600">${d.managerName}</td><td class="p-3 text-center"><span class="risk-dot ${getRiskDotClass(d.riskLevel)}"></span></td><td class="p-3 text-center"><button onclick="openFamilyModal('${doc.id}')" class="bg-gray-200 text-gray-700 px-3 py-1 rounded text-xs hover:bg-gray-300 transition font-bold">查看詳情</button></td></tr>`;
-                });
-
-                // 更新看板
-                renderDirectorAlerts();
-
-                Object.values(managerStats).forEach(stat => {
-                    const rate = stat.total ? Math.round((stat.stable / stat.total) * 100) : 0;
-                    teamDiv.innerHTML += `<div class="bg-white p-4 rounded border border-orange-100 flex justify-between items-center shadow-sm mb-2"><div><p class="font-bold text-lg text-gray-800">${stat.name}</p><p class="text-xs text-gray-500">管理 ${stat.total} 戶</p></div><div class="text-right"><p class="text-2xl font-bold ${rate < 60 ? 'text-riskRed' : 'text-riskGreen'}">${rate}%</p><p class="text-xs text-gray-400">穩定率</p></div></div>`;
-                });
-             });
-        }
-        
         function getRiskClass(level) { if(level === 'red') return 'bg-red-100 text-riskRed'; if(level === 'yellow') return 'bg-yellow-100 text-riskYellow'; return 'bg-green-100 text-riskGreen'; }
         function getRiskLabel(level) { if(level === 'red') return '高風險'; if(level === 'yellow') return '觀察中'; return '穩定'; }
         function getRiskDotClass(level) { if(level === 'red') return 'bg-riskRed'; if(level === 'yellow') return 'bg-riskYellow'; return 'bg-riskGreen'; }
