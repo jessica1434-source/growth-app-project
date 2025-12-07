@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>兒童生長管理系統 (終極修正版V12)</title>
+    <title>兒童生長管理系統 (終極修正版V17 - 風險燈號位置調整)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -134,9 +134,24 @@
             </div>
 
             <div class="bg-white p-6 rounded-lg shadow border border-gray-200">
-                <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-secondary"></i> 各國籍成效分析
+                </h3>
+                <div class="w-full h-64 md:h-80">
+                    <canvas id="countryGrowthChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow border border-gray-200">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-2">
                     <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i class="fa-solid fa-list"></i> 全機構家庭明細</h3>
-                    <input type="text" id="ownerSearch" placeholder="🔍 搜尋..." class="border p-2 rounded text-sm w-48" oninput="renderOwnerTable()">
+                    
+                    <div class="flex items-center gap-2 w-full md:w-auto">
+                        <select id="ownerCountryFilter" onchange="renderOwnerTable()" class="border p-2 rounded text-sm font-bold text-gray-700 bg-gray-50 focus:outline-none focus:border-primary">
+                            <option value="ALL">🌏 所有國籍</option>
+                        </select>
+                        <input type="text" id="ownerSearch" placeholder="🔍 搜尋姓名..." class="border p-2 rounded text-sm w-full md:w-48 focus:outline-none focus:border-primary" oninput="renderOwnerTable()">
+                    </div>
                 </div>
                 <div class="overflow-x-auto rounded-lg border border-gray-200">
                     <table class="w-full text-left border-collapse">
@@ -246,8 +261,25 @@
                     <div id="content-basic" class="space-y-6">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div><label class="block text-sm font-bold text-gray-700 mb-1">家長姓名</label><input type="text" id="parentName" class="w-full border p-3 rounded-lg focus:ring-2 focus:ring-primary outline-none" required></div>
-                            <div><label class="block text-sm font-bold text-gray-700 mb-1">國籍/地區</label><select id="nationality" class="w-full border p-3 rounded-lg bg-white"><option value="台灣">台灣</option><option value="外籍">外籍</option><option value="其他">其他</option></select></div>
-                            <div><label class="block text-sm font-bold text-gray-700 mb-1">加入日期</label><input type="date" id="joinDate" class="w-full border p-3 rounded-lg"></div>
+                            
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-1">國籍/地區</label>
+                                <input type="text" id="nationality" list="nationalityList" class="w-full border p-3 rounded-lg bg-white focus:ring-2 focus:ring-primary outline-none" placeholder="請選擇或輸入" required>
+                                <datalist id="nationalityList">
+                                    <option value="台灣">
+                                    <option value="越南">
+                                    <option value="印尼">
+                                    <option value="菲律賓">
+                                    <option value="泰國">
+                                    <option value="馬來西亞">
+                                    <option value="中國">
+                                    <option value="日本">
+                                    <option value="韓國">
+                                    <option value="美國">
+                                </datalist>
+                            </div>
+
+                            <div><label class="block text-sm font-bold text-gray-700 mb-1">加入日期</label><input type="date" id="joinDate" class="w-full border p-3 rounded-lg" max="9999-12-31"></div>
                             <div class="flex items-center pt-6"><input type="checkbox" id="isRenewal" class="w-5 h-5 text-primary"><label for="isRenewal" class="ml-2 font-bold text-gray-700">是否為續約戶</label></div>
                         </div>
 
@@ -258,26 +290,30 @@
                             </div>
                             <div id="kidsContainer"></div>
                         </div>
-
-                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                            <label class="block text-sm font-bold text-gray-700 mb-2">風險等級</label>
-                            <div class="flex gap-4">
-                                <label class="flex items-center cursor-pointer"><input type="radio" name="risk" value="green" checked class="w-4 h-4 text-green-600"> <span class="ml-2 text-green-700 font-bold">穩定 (綠燈)</span></label>
-                                <label class="flex items-center cursor-pointer"><input type="radio" name="risk" value="yellow" class="w-4 h-4 text-yellow-500"> <span class="ml-2 text-yellow-600 font-bold">觀察 (黃燈)</span></label>
-                                <label class="flex items-center cursor-pointer"><input type="radio" name="risk" value="red" class="w-4 h-4 text-red-600"> <span class="ml-2 text-red-700 font-bold">高風險 (紅燈)</span></label>
-                            </div>
-                        </div>
                     </div>
 
                     <div id="content-records" class="hidden space-y-6">
-                        <div class="bg-yellow-50 p-4 rounded mb-4 flex gap-4 items-center">
-                            <div class="w-full"><label class="block text-xs font-bold text-gray-500 uppercase">選擇孩童</label><select id="recordKidSelect" class="w-full border p-2 rounded" onchange="renderKidLogs()"></select></div>
+                        <div class="bg-yellow-50 p-4 rounded mb-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">選擇孩童</label>
+                                    <select id="recordKidSelect" class="w-full border p-2 rounded" onchange="renderKidLogs()"></select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">風險等級評估</label>
+                                    <div class="flex gap-4 bg-white p-2 rounded border border-yellow-200">
+                                        <label class="flex items-center cursor-pointer"><input type="radio" name="risk" value="green" checked class="w-4 h-4 text-green-600"> <span class="ml-2 text-green-700 font-bold text-sm">穩定</span></label>
+                                        <label class="flex items-center cursor-pointer"><input type="radio" name="risk" value="yellow" class="w-4 h-4 text-yellow-500"> <span class="ml-2 text-yellow-600 font-bold text-sm">觀察</span></label>
+                                        <label class="flex items-center cursor-pointer"><input type="radio" name="risk" value="red" class="w-4 h-4 text-red-600"> <span class="ml-2 text-red-700 font-bold text-sm">高險</span></label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         
                         <div class="bg-white p-4 rounded border border-gray-200 shadow-sm" id="logFormContainer">
                             <h5 class="font-bold text-gray-800 mb-3 border-b pb-1">新增紀錄</h5>
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                                <div><label class="text-xs text-gray-500">日期</label><input type="date" id="logDate" class="w-full border p-1 rounded text-sm"></div>
+                                <div><label class="text-xs text-gray-500">日期</label><input type="date" id="logDate" class="w-full border p-1 rounded text-sm" max="9999-12-31"></div>
                                 <div><label class="text-xs text-gray-500">身高 (cm)</label><div class="flex items-center gap-1"><input type="number" step="0.1" id="logHeight" class="w-full border p-1 rounded text-sm"><span id="heightTrend" class="text-[10px] font-bold w-12"></span></div></div>
                                 <div><label class="text-xs text-gray-500">體重 (kg)</label><input type="number" step="0.1" id="logWeight" class="w-full border p-1 rounded text-sm"></div>
                                 <div><label class="text-xs text-gray-500">茶包 (包)</label><select id="logTeaBags" class="w-full border p-1 rounded text-sm bg-white"><option value="">無</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
@@ -349,6 +385,7 @@
         let directorsCache = []; 
         let directorPersonalCache = [];
         let isModalReadOnly = false; 
+        let countryChartInstance = null; // V13: 圖表實例
 
         // === 2. 登入狀態 ===
         auth.onAuthStateChanged(async (user) => { 
@@ -546,6 +583,9 @@
                     }
                 });
                 
+                // V13: 更新圖表與篩選選單
+                updateOwnerCountryFilter(ownerFamiliesCache);
+                updateCountryChart(ownerFamiliesCache);
                 renderOwnerTable();
                 
                 document.getElementById('ownerRiskCount').innerText = riskCount;
@@ -589,7 +629,7 @@
                              </select>
                          </div>` : '';
  
-                     // 修改點：若是班主任(Director)，不顯示移交按鈕
+                     // V13 修改點：若是班主任(Director)，不顯示移交按鈕
                      const transferBtn = !isDirector ? `<button onclick="openTransferModal('${doc.id}', '${u.name}')" class="px-3 py-1 text-xs rounded border bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold"><i class="fa-solid fa-right-left"></i> 移交</button>` : '';
 
                      html += `
@@ -614,12 +654,76 @@
             });
         }
 
+        // V13: 更新國籍選單
+        function updateOwnerCountryFilter(families) {
+            const select = document.getElementById('ownerCountryFilter');
+            const currentVal = select.value;
+            const countries = new Set();
+            families.forEach(f => { if(f.nationality) countries.add(f.nationality); });
+            
+            let html = '<option value="ALL">🌏 所有國籍</option>';
+            countries.forEach(c => {
+                html += `<option value="${c}">${c}</option>`;
+            });
+            select.innerHTML = html;
+            select.value = currentVal; // 保持目前選擇
+        }
+
+        // V13: 更新國籍成效圖表
+        function updateCountryChart(families) {
+            const ctx = document.getElementById('countryGrowthChart').getContext('2d');
+            
+            // 資料統計邏輯
+            const stats = {};
+            families.forEach(f => {
+                const nation = f.nationality || '未分類';
+                if (!stats[nation]) stats[nation] = { totalKids: 0, excellent: 0, stagnant: 0 };
+                
+                if (f.kids && Array.isArray(f.kids)) {
+                    f.kids.forEach(k => {
+                        stats[nation].totalKids++;
+                        if (checkExcellence(k, f.joinDate)) stats[nation].excellent++;
+                        if (checkGrowthStagnation(k, f.joinDate)) stats[nation].stagnant++;
+                    });
+                }
+            });
+
+            const labels = Object.keys(stats);
+            const dataTotal = labels.map(l => stats[l].totalKids);
+            const dataExc = labels.map(l => stats[l].excellent);
+            const dataStag = labels.map(l => stats[l].stagnant);
+
+            if (countryChartInstance) countryChartInstance.destroy();
+
+            countryChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: '孩童總數', data: dataTotal, backgroundColor: '#BECCE4' },
+                        { label: '卓越成長 (優)', data: dataExc, backgroundColor: '#10B981' },
+                        { label: '生長停滯 (險)', data: dataStag, backgroundColor: '#EF4444' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        // V16: 渲染表格 (字體統一化)
         function renderOwnerTable() {
             const search = document.getElementById('ownerSearch').value.toLowerCase();
-            const list = ownerFamiliesCache.filter(d => 
-                (d.parentName && d.parentName.toLowerCase().includes(search)) || 
-                (d.managerName && d.managerName.toLowerCase().includes(search))
-            );
+            const countryFilter = document.getElementById('ownerCountryFilter').value;
+            
+            const list = ownerFamiliesCache.filter(d => {
+                const matchSearch = (d.parentName && d.parentName.toLowerCase().includes(search)) || 
+                                    (d.managerName && d.managerName.toLowerCase().includes(search));
+                const matchCountry = countryFilter === 'ALL' || d.nationality === countryFilter;
+                return matchSearch && matchCountry;
+            });
             
             let html = '';
             list.forEach(d => {
@@ -627,8 +731,8 @@
                 if(d.kids && d.kids.length > 0) {
                     kidInfo = d.kids.map(k => 
                         `<div class="mb-1 h-6 flex items-center">
-                            <span class="font-bold text-gray-800 mr-2">${k.name}</span>
-                            <span class="text-xs text-gray-400">${k.dob || ''}</span>
+                            <span class="font-bold text-gray-800 mr-2 text-sm">${k.name}</span>
+                            <span class="text-sm text-gray-400">${k.dob || ''}</span>
                          </div>`
                     ).join('<div class="border-t border-gray-100 my-1"></div>');
                 }
@@ -652,10 +756,10 @@
                             const colorClass = diff > 0 ? 'text-green-600' : (diff < 0 ? 'text-red-500' : 'text-gray-500');
                             return `<div class="mb-1 h-6 flex items-center font-mono">
                                         <span class="${colorClass} font-bold text-sm mr-1">${sign}${diff.toFixed(1)}cm</span>
-                                        <span class="text-[10px] text-gray-400">(${currentH})</span>
+                                        <span class="text-sm text-gray-400">(${currentH})</span>
                                     </div>`;
                         } else if (hasLog) {
-                            return `<div class="mb-1 h-6 flex items-center text-xs text-gray-500">${currentH}cm <span class="text-[9px] ml-1">(缺初始)</span></div>`;
+                            return `<div class="mb-1 h-6 flex items-center text-sm text-gray-500">${currentH}cm <span class="text-sm ml-1">(缺初始)</span></div>`;
                         } else {
                             return `<div class="mb-1 h-6 flex items-center text-gray-300">-</div>`;
                         }
@@ -663,11 +767,11 @@
                 }
 
                 html += `<tr class="border-b hover:bg-gray-50 cursor-pointer transition" onclick="openFamilyModal('${d.id}', 'records')">
-                    <td class="p-3 align-middle">${d.nationality}</td>
-                    <td class="p-3 align-middle font-bold text-lg text-gray-800">${d.parentName}</td>
+                    <td class="p-3 align-middle text-sm">${d.nationality}</td>
+                    <td class="p-3 align-middle font-bold text-sm text-gray-800">${d.parentName}</td>
                     <td class="p-3 align-middle text-sm">${kidInfo}</td>
                     <td class="p-3 align-middle text-sm">${growthInfo}</td>
-                    <td class="p-3 align-middle text-gray-500">${d.managerName}</td>
+                    <td class="p-3 align-middle text-sm text-gray-500">${d.managerName}</td>
                     <td class="p-3 align-middle text-center"><span class="risk-dot ${d.riskLevel==='red'?'bg-red-500':(d.riskLevel==='yellow'?'bg-yellow-500':'bg-green-500')}"></span></td>
                     <td class="p-3 align-middle text-center whitespace-nowrap">
                         <button onclick="event.stopPropagation(); openSingleTransferModal('${d.id}', '${d.parentName}', '${d.managerId}')" class="bg-purple-50 text-purple-600 hover:bg-purple-100 px-2 py-1 rounded text-xs mr-2 font-bold" title="移交此家庭"><i class="fa-solid fa-right-left"></i></button>
@@ -969,7 +1073,7 @@
             
             const html = `<div class="grid grid-cols-1 md:grid-cols-5 gap-2 bg-white p-2 rounded border border-gray-200 mb-2 kid-entry items-end">
                 <div class="md:col-span-1"><label class="text-[10px] text-gray-400">姓名</label><input type="text" class="kid-name w-full border p-1 text-sm rounded" value="${data ? data.name : ''}" required ${isModalReadOnly?'disabled':''}></div>
-                <div class="md:col-span-1"><label class="text-[10px] text-gray-400">生日</label><input type="date" class="kid-dob w-full border p-1 text-sm rounded" value="${data ? data.dob : ''}" ${isModalReadOnly?'disabled':''}></div>
+                <div class="md:col-span-1"><label class="text-[10px] text-gray-400">生日</label><input type="date" class="kid-dob w-full border p-1 text-sm rounded" value="${data ? data.dob : ''}" ${isModalReadOnly?'disabled':''} max="9999-12-31"></div>
                 <div class="md:col-span-1"><label class="text-[10px] text-gray-400">初始身高</label><input type="number" step="0.1" class="kid-h w-full border p-1 text-sm rounded" value="${data ? data.initialHeight : ''}" placeholder="cm" ${isModalReadOnly?'disabled':''}></div>
                 <div class="md:col-span-1"><label class="text-[10px] text-gray-400">初始體重</label><input type="number" step="0.1" class="kid-w w-full border p-1 text-sm rounded" value="${data ? data.initialWeight : ''}" placeholder="kg" ${isModalReadOnly?'disabled':''}></div>
                 ${delBtn}
@@ -1010,7 +1114,7 @@
                 
                 const sorted = [...logs].sort((a,b) => (a.date||'').localeCompare(b.date||''));
                 
-                // 修改點：新增 忌口 和 狀況 欄位表頭
+                // V13 修改點：新增 忌口 和 狀況 欄位表頭
                 let html = '<table class="w-full text-xs text-left"><thead class="bg-gray-50"><tr><th class="p-1">日期</th><th class="p-1">身高</th><th class="p-1">體重</th><th class="p-1">茶包</th><th class="p-1">執行(推/穴/運)</th><th class="p-1">忌口</th><th class="p-1">狀況</th><th class="p-1">操作</th></tr></thead><tbody>';
                 
                 for(let i = sorted.length - 1; i >= 0; i--) {
@@ -1023,7 +1127,7 @@
                     
                     const delBtn = isModalReadOnly ? '-' : `<button onclick="deleteLog(${origIdx})" class="text-red-500"><i class="fa-solid fa-trash"></i></button>`;
                     
-                    // 修改點：新增 忌口 和 狀況 欄位內容
+                    // V13 修改點：新增 忌口 和 狀況 欄位內容 (並加入 truncate 避免過長)
                     html += `<tr class="border-b"><td class="p-1">${l.date}</td><td class="p-1 font-bold">${l.height} <span class="${hColor} text-[10px]">(${diffH>0?'+':''}${diffH})</span></td><td class="p-1">${l.weight}</td><td class="p-1">${l.teaBags||'-'}</td><td class="p-1">${exec}</td><td class="p-1">${l.diet||'-'}</td><td class="p-1 max-w-[100px] truncate" title="${l.statusReport||''}">${l.statusReport||'-'}</td><td class="p-1">${delBtn}</td></tr>`;
                 }
                 html += '</tbody></table>';
