@@ -68,6 +68,15 @@
         </div>
     </nav>
 
+    <div id="adminToolbar" class="hidden bg-adminPurple text-white p-2 flex flex-wrap justify-center items-center gap-4 shadow-inner">
+        <span class="font-bold text-sm"><i class="fa-solid fa-user-secret mr-1"></i> 超級管理視角：</span>
+        <div class="flex gap-2">
+            <button onclick="switchView('owner')" class="px-3 py-1 bg-white text-adminPurple rounded font-bold text-xs hover:bg-gray-200 transition">老闆視角</button>
+            <button onclick="switchView('director')" class="px-3 py-1 bg-purple-400 text-white rounded font-bold text-xs hover:bg-purple-500 transition">班主任視角</button>
+            <button onclick="switchView('manager')" class="px-3 py-1 bg-purple-400 text-white rounded font-bold text-xs hover:bg-purple-500 transition">管理師視角</button>
+        </div>
+    </div>
+
     <main class="flex-grow p-4 md:p-6 max-w-7xl mx-auto w-full">
         
         <div id="authSection" class="max-w-md mx-auto bg-card p-0 rounded-xl shadow-xl mt-10 overflow-hidden border border-gray-300">
@@ -391,6 +400,9 @@
         let isModalReadOnly = false; 
         let countryChartInstance = null; // V13: 圖表實例
 
+        // V20: 資料載入狀態旗標，避免切換視角時重複監聽
+        let isOwnerInit = false, isDirectorInit = false, isManagerInit = false;
+
         // === 2. 登入狀態 ===
         auth.onAuthStateChanged(async (user) => { 
             if (user) { 
@@ -421,7 +433,11 @@
                         roleBadge.className = `block text-xs ${roleBg} text-white px-1 rounded inline-block mb-1`;
                         document.getElementById('userNameDisplay').innerText = userData.name; 
                         
-                        if (userData.role === 'owner' || userData.role === 'admin') { 
+                        // V20: 若是 admin，顯示切換控制列，並預設載入老闆介面
+                        if (userData.role === 'admin') {
+                            document.getElementById('adminToolbar').classList.remove('hidden');
+                            switchView('owner');
+                        } else if (userData.role === 'owner') { 
                             initOwnerDashboard(); document.getElementById('ownerDashboard').classList.remove('hidden'); 
                         } else if (userData.role === 'director') {
                             initDirectorDashboard(); document.getElementById('directorDashboard').classList.remove('hidden');
@@ -437,6 +453,33 @@
             } 
         });
 
+        // V20: 切換視角功能
+        function switchView(view) {
+            ['ownerDashboard','directorDashboard','managerDashboard'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            const buttons = document.getElementById('adminToolbar').querySelectorAll('button');
+            buttons.forEach(b => {
+                b.classList.remove('bg-white', 'text-adminPurple');
+                b.classList.add('bg-purple-400', 'text-white');
+            });
+
+            if (view === 'owner') {
+                document.getElementById('ownerDashboard').classList.remove('hidden');
+                initOwnerDashboard();
+                buttons[0].classList.remove('bg-purple-400', 'text-white');
+                buttons[0].classList.add('bg-white', 'text-adminPurple');
+            } else if (view === 'director') {
+                document.getElementById('directorDashboard').classList.remove('hidden');
+                initDirectorDashboard();
+                buttons[1].classList.remove('bg-purple-400', 'text-white');
+                buttons[1].classList.add('bg-white', 'text-adminPurple');
+            } else if (view === 'manager') {
+                document.getElementById('managerDashboard').classList.remove('hidden');
+                initManagerDashboard();
+                buttons[2].classList.remove('bg-purple-400', 'text-white');
+                buttons[2].classList.add('bg-white', 'text-adminPurple');
+            }
+        }
+
         // === 3. 登入註冊 ===
         async function handleAuth(e, type) { 
             e.preventDefault(); 
@@ -444,8 +487,6 @@
             try { 
                 let idInput = type === 'login' ? document.getElementById('loginId').value.trim() : document.getElementById('regId').value.trim().toLowerCase();
                 const pwdInput = type === 'login' ? document.getElementById('loginPwd').value : document.getElementById('regPwd').value;
-                
-                // V19: 混合模式 - 如果輸入值包含 @ 就當作 Email，否則加上假網域
                 const finalEmail = idInput.includes('@') ? idInput : idInput + FAKE_DOMAIN;
 
                 if (type === 'login') { 
@@ -469,7 +510,7 @@
             } 
         }
 
-        // V19 新增：忘記密碼功能
+        // V19: 忘記密碼功能
         function forgotPassword() {
             const email = prompt("請輸入您註冊時的完整 Email：\n(僅適用於使用真實 Email 註冊的帳號)");
             if (email) {
@@ -562,9 +603,11 @@
             return latestHeight <= initialHeight;
         }
 
-        // === 5. 儀表板與列表 (維持不變) ===
-        // 老闆/Admin儀表板
+        // === 5. 儀表板與列表 (V20: 加入狀態判斷，防止重複監聽) ===
         function initOwnerDashboard() {
+            if(isOwnerInit) return; // 避免重複執行
+            isOwnerInit = true;
+
             db.collection('families').onSnapshot(snap => {
                 ownerFamiliesCache = [];
                 document.getElementById('ownerTotalFamilies').innerText = snap.size;
@@ -636,7 +679,6 @@
                 else { stagnantBoard.classList.add('hidden'); }
             });
 
-            // 人員管理列表
             db.collection('users').where('role', '!=', 'owner').onSnapshot(snap => {
                  let html = '';
                  allStaffCache = []; directorsCache = [];
@@ -900,8 +942,11 @@
             showLoading(false);
         }
 
-        // 班主任儀表板 (維持不變)
+        // 班主任儀表板 (加入防重複執行)
         async function initDirectorDashboard() {
+            if(isDirectorInit) return;
+            isDirectorInit = true;
+
             db.collection('families').where('managerId', '==', currentUser.uid).onSnapshot(snap => {
                 directorPersonalCache = [];
                 snap.forEach(doc => directorPersonalCache.push({id: doc.id, ...doc.data()}));
@@ -974,7 +1019,7 @@
             });
         }
 
-        // 班主任個人列表渲染
+        // 班主任個人列表渲染 (維持不變)
         function renderDirectorMyFamilyList() {
             const container = document.getElementById('directorMyFamilyList');
             const search = document.getElementById('directorMySearch').value.toLowerCase();
@@ -1003,8 +1048,11 @@
             container.innerHTML = html;
         }
 
-        // 管理師儀表板
+        // 管理師儀表板 (加入防重複執行)
         function initManagerDashboard() {
+            if(isManagerInit) return;
+            isManagerInit = true;
+
             const list = document.getElementById('managerFamilyList');
             const exSection = document.getElementById('managerExcellentSection');
             const exList = document.getElementById('managerExcellentList');
