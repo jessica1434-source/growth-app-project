@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>兒童生長管理系統 (終極修正版V17 - 風險燈號位置調整)</title>
+    <title>兒童生長管理系統 </title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -17,7 +17,8 @@
                         bg: '#FAE9C2', card: '#FFFFF0', primary: '#FF9800', secondary: '#BECCE4',
                         accent: '#FFB74D', riskRed: '#D32F2F', riskYellow: '#FBC02D', riskGreen: '#388E3C',
                         infoBlue: '#BBDEFB', infoDark: '#1976D2',
-                        excellentBg: '#ECFDF5', excellentBorder: '#10B981', excellentText: '#065F46'
+                        excellentBg: '#ECFDF5', excellentBorder: '#10B981', excellentText: '#065F46',
+                        adminPurple: '#7E22CE', adminBg: '#F3E8FF'
                     }
                 }
             }
@@ -77,14 +78,17 @@
             <div class="p-8">
                 <form id="loginForm" onsubmit="handleAuth(event, 'login')" class="space-y-6">
                     <div class="text-center mb-6"><h2 class="text-2xl font-bold text-gray-800">歡迎回來</h2></div>
-                    <div><label class="block text-sm font-bold mb-2 text-gray-700">帳號</label><input type="text" id="loginId" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="請輸入帳號" required></div>
+                    <div><label class="block text-sm font-bold mb-2 text-gray-700">帳號 / Email</label><input type="text" id="loginId" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="輸入帳號或完整 Email" required></div>
                     <div><label class="block text-sm font-bold mb-2 text-gray-700">密碼</label><input type="password" id="loginPwd" class="w-full p-3 border border-gray-300 rounded-lg" required></div>
                     <button type="submit" class="w-full bg-primary text-white py-3 rounded-lg hover:bg-orange-600 transition font-bold shadow-md text-lg">登入</button>
+                    <div class="text-center">
+                        <button type="button" onclick="forgotPassword()" class="text-sm text-blue-600 hover:underline">忘記密碼？</button>
+                    </div>
                 </form>
                 <form id="registerForm" onsubmit="handleAuth(event, 'register')" class="space-y-4 hidden">
-                    <div class="bg-blue-50 p-4 rounded text-sm text-blue-800 mb-4 border-l-4 border-blue-500"><p class="font-bold">新進人員註冊</p><p>帳號將自動轉為小寫。</p></div>
+                    <div class="bg-blue-50 p-4 rounded text-sm text-blue-800 mb-4 border-l-4 border-blue-500"><p class="font-bold">新進人員註冊</p><p>建議使用真實 Email 註冊，以便日後自行找回密碼。</p></div>
                     <div><label class="block text-sm font-bold mb-1 text-gray-700">姓名</label><input type="text" id="regName" class="w-full p-3 border border-gray-300 rounded" required></div>
-                    <div><label class="block text-sm font-bold mb-1 text-gray-700">自訂帳號 (英文)</label><input type="text" id="regId" class="w-full p-3 border border-gray-300 rounded" placeholder="例: martin" required></div>
+                    <div><label class="block text-sm font-bold mb-1 text-gray-700">自訂帳號 或 Email</label><input type="text" id="regId" class="w-full p-3 border border-gray-300 rounded" placeholder="例: martin 或 martin@gmail.com" required></div>
                     <div><label class="block text-sm font-bold mb-1 text-gray-700">自訂密碼</label><input type="password" id="regPwd" class="w-full p-3 border border-gray-300 rounded" required></div>
                     <button type="submit" class="w-full bg-secondary text-black py-3 rounded hover:bg-blue-300 transition font-bold shadow-md">建立帳號</button>
                 </form>
@@ -405,11 +409,19 @@
                         document.getElementById('navUser').classList.remove('hidden'); 
                         document.getElementById('navUser').classList.add('flex'); 
                         
-                        const roleName = userData.role === 'owner' ? '老闆' : (userData.role === 'director' ? '班主任' : '管理師');
-                        document.getElementById('userRoleDisplay').innerText = roleName; 
+                        let roleName = '管理師';
+                        let roleBg = 'bg-primary';
+                        
+                        if (userData.role === 'owner') roleName = '老闆';
+                        else if (userData.role === 'admin') { roleName = '程式管理者'; roleBg = 'bg-adminPurple'; }
+                        else if (userData.role === 'director') roleName = '班主任';
+                        
+                        const roleBadge = document.getElementById('userRoleDisplay');
+                        roleBadge.innerText = roleName;
+                        roleBadge.className = `block text-xs ${roleBg} text-white px-1 rounded inline-block mb-1`;
                         document.getElementById('userNameDisplay').innerText = userData.name; 
                         
-                        if (userData.role === 'owner') { 
+                        if (userData.role === 'owner' || userData.role === 'admin') { 
                             initOwnerDashboard(); document.getElementById('ownerDashboard').classList.remove('hidden'); 
                         } else if (userData.role === 'director') {
                             initDirectorDashboard(); document.getElementById('directorDashboard').classList.remove('hidden');
@@ -432,6 +444,8 @@
             try { 
                 let idInput = type === 'login' ? document.getElementById('loginId').value.trim() : document.getElementById('regId').value.trim().toLowerCase();
                 const pwdInput = type === 'login' ? document.getElementById('loginPwd').value : document.getElementById('regPwd').value;
+                
+                // V19: 混合模式 - 如果輸入值包含 @ 就當作 Email，否則加上假網域
                 const finalEmail = idInput.includes('@') ? idInput : idInput + FAKE_DOMAIN;
 
                 if (type === 'login') { 
@@ -455,16 +469,40 @@
             } 
         }
 
+        // V19 新增：忘記密碼功能
+        function forgotPassword() {
+            const email = prompt("請輸入您註冊時的完整 Email：\n(僅適用於使用真實 Email 註冊的帳號)");
+            if (email) {
+                if (!email.includes('@')) {
+                    alert("請輸入有效的 Email 格式");
+                    return;
+                }
+                showLoading(true);
+                auth.sendPasswordResetEmail(email)
+                    .then(() => {
+                        showLoading(false);
+                        alert("重設密碼信已發送！請檢查您的信箱。");
+                    })
+                    .catch((error) => {
+                        showLoading(false);
+                        if (error.code === 'auth/user-not-found') {
+                            alert("找不到此 Email 的使用者。如果您是使用自訂帳號(如 martin)，請聯繫管理員重置。");
+                        } else {
+                            alert("發送失敗：" + error.message);
+                        }
+                    });
+            }
+        }
+
         function logout() { auth.signOut(); location.reload(); }
         function switchAuthTab(tab) { document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login'); document.getElementById('registerForm').classList.toggle('hidden', tab !== 'register'); document.getElementById('tab-login').classList.toggle('active', tab === 'login'); document.getElementById('tab-register').classList.toggle('active', tab === 'register'); }
 
-        // === 4. 判定邏輯 ===
+        // === 4. 判定邏輯 (維持不變) ===
         function checkExcellence(kid, joinDateStr) {
             if (!kid.logs || kid.logs.length === 0) return null;
             if (!kid.initialHeight || !joinDateStr) return null;
 
             const startH = parseFloat(kid.initialHeight); 
-            
             const sortedLogs = [...kid.logs].sort((a, b) => new Date(a.date) - new Date(b.date));
             const lastLog = sortedLogs[sortedLogs.length - 1];
             const endH = parseFloat(lastLog.height);       
@@ -500,7 +538,6 @@
             if (isExcellent) {
                 return { reason, val: (growth / months).toFixed(2) };
             }
-            
             return null;
         }
 
@@ -525,8 +562,8 @@
             return latestHeight <= initialHeight;
         }
 
-        // === 5. 儀表板與列表 ===
-        // 老闆儀表板
+        // === 5. 儀表板與列表 (維持不變) ===
+        // 老闆/Admin儀表板
         function initOwnerDashboard() {
             db.collection('families').onSnapshot(snap => {
                 ownerFamiliesCache = [];
@@ -565,7 +602,6 @@
                             }
 
                             const excCheck = checkExcellence(k, d.joinDate); 
-                            
                             if (excCheck) {
                                 excCount++;
                                 excHtml += `<div onclick="openFamilyModal('${doc.id}')" class="cursor-pointer hover:bg-green-100 p-1 flex justify-between items-center border-b border-green-100 last:border-0">
@@ -583,7 +619,6 @@
                     }
                 });
                 
-                // V13: 更新圖表與篩選選單
                 updateOwnerCountryFilter(ownerFamiliesCache);
                 updateCountryChart(ownerFamiliesCache);
                 renderOwnerTable();
@@ -601,6 +636,7 @@
                 else { stagnantBoard.classList.add('hidden'); }
             });
 
+            // 人員管理列表
             db.collection('users').where('role', '!=', 'owner').onSnapshot(snap => {
                  let html = '';
                  allStaffCache = []; directorsCache = [];
@@ -613,6 +649,8 @@
                  snap.forEach(doc => {
                      const u = doc.data();
                      const isDirector = u.role === 'director';
+                     const isAdmin = u.role === 'admin';
+                     
                      let directorOptions = `<option value="">無班主任</option>`;
                      directorsCache.forEach(dir => {
                          if(dir.id !== doc.id) {
@@ -621,7 +659,7 @@
                          }
                      });
  
-                     const assignBlock = !isDirector ? `
+                     const assignBlock = (!isDirector && !isAdmin) ? `
                          <div class="mt-2 text-xs flex items-center gap-2">
                              <span class="text-gray-500">指派督導:</span>
                              <select onchange="assignDirector('${doc.id}', this.value)" class="border rounded p-1 text-xs">
@@ -629,21 +667,35 @@
                              </select>
                          </div>` : '';
  
-                     // V13 修改點：若是班主任(Director)，不顯示移交按鈕
                      const transferBtn = !isDirector ? `<button onclick="openTransferModal('${doc.id}', '${u.name}')" class="px-3 py-1 text-xs rounded border bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold"><i class="fa-solid fa-right-left"></i> 移交</button>` : '';
+
+                     let adminBtn = '';
+                     let roleBadge = isDirector ? '班主任' : '管理師';
+                     let roleClass = 'text-gray-500';
+                     
+                     if (isAdmin) {
+                         roleBadge = '程式管理者';
+                         roleClass = 'text-adminPurple font-bold';
+                         adminBtn = `<button onclick="toggleAdmin('${doc.id}', false)" class="px-3 py-1 text-xs rounded border bg-gray-100 text-gray-600 hover:bg-gray-200 font-bold">移除管理者</button>`;
+                     } else {
+                         adminBtn = `<button onclick="toggleAdmin('${doc.id}', true)" class="px-3 py-1 text-xs rounded border bg-adminBg text-adminPurple hover:bg-purple-200 font-bold">設為程式管理者</button>`;
+                     }
+
+                     const directorBtn = isAdmin ? '' : `<button onclick="toggleRole('${doc.id}', '${u.role}')" class="px-3 py-1 text-xs rounded border ${isDirector ? 'bg-purple-50 text-purple-600' : 'bg-orange-50 text-orange-600'} font-bold">
+                                     ${isDirector ? '降為管理師' : '升為班主任'}
+                                 </button>`;
 
                      html += `
                      <div class="bg-white border p-3 rounded flex flex-col shadow-sm gap-2">
                          <div class="flex justify-between items-center">
                              <div>
                                  <div class="font-bold text-gray-800">${u.name} <span class="text-xs text-gray-400">(${u.username})</span></div>
-                                 <div class="text-xs text-gray-500"><i class="fa-solid fa-id-badge"></i> ${isDirector ? '班主任' : '管理師'}</div>
+                                 <div class="text-xs ${roleClass}"><i class="fa-solid fa-id-badge"></i> ${roleBadge}</div>
                              </div>
-                             <div class="flex gap-2">
+                             <div class="flex gap-2 flex-wrap justify-end">
+                                 ${adminBtn}
                                  ${transferBtn}
-                                 <button onclick="toggleRole('${doc.id}', '${u.role}')" class="px-3 py-1 text-xs rounded border ${isDirector ? 'bg-purple-50 text-purple-600' : 'bg-orange-50 text-orange-600'} font-bold">
-                                     ${isDirector ? '降為管理師' : '升為班主任'}
-                                 </button>
+                                 ${directorBtn}
                                  <button onclick="deleteUser('${doc.id}', '${u.name}')" class="px-3 py-1 text-xs rounded border bg-red-50 text-red-600 hover:bg-red-100 font-bold"><i class="fa-solid fa-trash"></i> 刪除</button>
                              </div>
                          </div>
@@ -654,31 +706,25 @@
             });
         }
 
-        // V13: 更新國籍選單
+        // 更新國籍選單
         function updateOwnerCountryFilter(families) {
             const select = document.getElementById('ownerCountryFilter');
             const currentVal = select.value;
             const countries = new Set();
             families.forEach(f => { if(f.nationality) countries.add(f.nationality); });
-            
             let html = '<option value="ALL">🌏 所有國籍</option>';
-            countries.forEach(c => {
-                html += `<option value="${c}">${c}</option>`;
-            });
+            countries.forEach(c => { html += `<option value="${c}">${c}</option>`; });
             select.innerHTML = html;
-            select.value = currentVal; // 保持目前選擇
+            select.value = currentVal;
         }
 
-        // V13: 更新國籍成效圖表
+        // 更新國籍成效圖表
         function updateCountryChart(families) {
             const ctx = document.getElementById('countryGrowthChart').getContext('2d');
-            
-            // 資料統計邏輯
             const stats = {};
             families.forEach(f => {
                 const nation = f.nationality || '未分類';
                 if (!stats[nation]) stats[nation] = { totalKids: 0, excellent: 0, stagnant: 0 };
-                
                 if (f.kids && Array.isArray(f.kids)) {
                     f.kids.forEach(k => {
                         stats[nation].totalKids++;
@@ -713,11 +759,10 @@
             });
         }
 
-        // V16: 渲染表格 (字體統一化)
+        // 渲染表格
         function renderOwnerTable() {
             const search = document.getElementById('ownerSearch').value.toLowerCase();
             const countryFilter = document.getElementById('ownerCountryFilter').value;
-            
             const list = ownerFamiliesCache.filter(d => {
                 const matchSearch = (d.parentName && d.parentName.toLowerCase().includes(search)) || 
                                     (d.managerName && d.managerName.toLowerCase().includes(search));
@@ -790,7 +835,7 @@
             document.getElementById('ownerFamilyTable').innerHTML = html;
         }
 
-        // === 6. 權限管理與連動 ===
+        // === 6. 權限管理與連動 (維持不變) ===
         async function assignDirector(managerId, directorId) {
             try { await db.collection('users').doc(managerId).update({ directorId: directorId }); } 
             catch(e) { alert("指派失敗: " + e.message); }
@@ -800,6 +845,15 @@
             const newRole = currentRole === 'director' ? 'manager' : 'director';
             if(confirm(`確定變更為 ${newRole === 'director' ? '班主任' : '管理師'} 嗎?`)) {
                 await db.collection('users').doc(uid).update({ role: newRole });
+            }
+        }
+
+        async function toggleAdmin(uid, makeAdmin) {
+            const newRole = makeAdmin ? 'admin' : 'manager';
+            const msg = makeAdmin ? '確定要將此人設為「程式管理者」嗎？\n他將擁有與老闆相同的最高權限！' : '確定要移除此人的管理者權限嗎？';
+            if(confirm(msg)) {
+                await db.collection('users').doc(uid).update({ role: newRole });
+                alert('權限已更新。');
             }
         }
 
@@ -846,7 +900,7 @@
             showLoading(false);
         }
 
-        // 班主任儀表板
+        // 班主任儀表板 (維持不變)
         async function initDirectorDashboard() {
             db.collection('families').where('managerId', '==', currentUser.uid).onSnapshot(snap => {
                 directorPersonalCache = [];
@@ -998,7 +1052,7 @@
             });
         }
 
-        // === Modal 與 資料操作 (共用) ===
+        // === Modal 與 資料操作 (共用) (維持不變) ===
         function openFamilyModal(id = null, initialTab = 'basic') {
             document.getElementById('familyForm').reset();
             document.getElementById('familyId').value = id || '';
