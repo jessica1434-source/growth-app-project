@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>兒童生長管理系統 (終極修正版V19 - 忘記密碼)</title>
+    <title>兒童生長管理系統 </title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -67,6 +67,15 @@
             <button onclick="logout()" class="bg-white text-gray-800 px-3 py-2 rounded hover:bg-gray-100 transition text-sm font-bold border border-gray-400"><i class="fa-solid fa-sign-out-alt"></i> 登出</button>
         </div>
     </nav>
+
+    <div id="adminToolbar" class="hidden bg-adminPurple text-white p-2 flex flex-wrap justify-center items-center gap-4 shadow-inner sticky top-[72px] z-30">
+        <span class="font-bold text-sm"><i class="fa-solid fa-user-secret mr-1"></i> 視角切換：</span>
+        <div class="flex gap-2">
+            <button onclick="switchView('owner')" class="px-3 py-1 bg-white text-adminPurple rounded font-bold text-xs hover:bg-gray-200 transition shadow">老闆視角</button>
+            <button onclick="switchView('director')" class="px-3 py-1 bg-purple-400 text-white rounded font-bold text-xs hover:bg-purple-500 transition shadow">班主任視角</button>
+            <button onclick="switchView('manager')" class="px-3 py-1 bg-purple-400 text-white rounded font-bold text-xs hover:bg-purple-500 transition shadow">管理師視角</button>
+        </div>
+    </div>
 
     <main class="flex-grow p-4 md:p-6 max-w-7xl mx-auto w-full">
         
@@ -391,6 +400,9 @@
         let isModalReadOnly = false; 
         let countryChartInstance = null; // V13: 圖表實例
 
+        // V20: 資料載入狀態旗標，避免切換視角時重複監聽
+        let isOwnerInit = false, isDirectorInit = false, isManagerInit = false;
+
         // === 2. 登入狀態 ===
         auth.onAuthStateChanged(async (user) => { 
             if (user) { 
@@ -421,8 +433,10 @@
                         roleBadge.className = `block text-xs ${roleBg} text-white px-1 rounded inline-block mb-1`;
                         document.getElementById('userNameDisplay').innerText = userData.name; 
                         
-                        if (userData.role === 'owner' || userData.role === 'admin') { 
-                            initOwnerDashboard(); document.getElementById('ownerDashboard').classList.remove('hidden'); 
+                        // V21 修正: 程式管理者 (Admin) 與 老闆 (Owner) 都能看到切換列
+                        if (userData.role === 'admin' || userData.role === 'owner') {
+                            document.getElementById('adminToolbar').classList.remove('hidden');
+                            switchView('owner'); // 預設進老闆視角
                         } else if (userData.role === 'director') {
                             initDirectorDashboard(); document.getElementById('directorDashboard').classList.remove('hidden');
                         } else { 
@@ -436,6 +450,33 @@
                 ['ownerDashboard','directorDashboard','managerDashboard'].forEach(id => document.getElementById(id).classList.add('hidden')); 
             } 
         });
+
+        // V20: 切換視角功能
+        function switchView(view) {
+            ['ownerDashboard','directorDashboard','managerDashboard'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            const buttons = document.getElementById('adminToolbar').querySelectorAll('button');
+            buttons.forEach(b => {
+                b.classList.remove('bg-white', 'text-adminPurple');
+                b.classList.add('bg-purple-400', 'text-white');
+            });
+
+            if (view === 'owner') {
+                document.getElementById('ownerDashboard').classList.remove('hidden');
+                initOwnerDashboard();
+                buttons[0].classList.remove('bg-purple-400', 'text-white');
+                buttons[0].classList.add('bg-white', 'text-adminPurple');
+            } else if (view === 'director') {
+                document.getElementById('directorDashboard').classList.remove('hidden');
+                initDirectorDashboard();
+                buttons[1].classList.remove('bg-purple-400', 'text-white');
+                buttons[1].classList.add('bg-white', 'text-adminPurple');
+            } else if (view === 'manager') {
+                document.getElementById('managerDashboard').classList.remove('hidden');
+                initManagerDashboard();
+                buttons[2].classList.remove('bg-purple-400', 'text-white');
+                buttons[2].classList.add('bg-white', 'text-adminPurple');
+            }
+        }
 
         // === 3. 登入註冊 ===
         async function handleAuth(e, type) { 
@@ -469,7 +510,7 @@
             } 
         }
 
-        // V19 新增：忘記密碼功能
+        // V19: 忘記密碼功能
         function forgotPassword() {
             const email = prompt("請輸入您註冊時的完整 Email：\n(僅適用於使用真實 Email 註冊的帳號)");
             if (email) {
@@ -562,9 +603,11 @@
             return latestHeight <= initialHeight;
         }
 
-        // === 5. 儀表板與列表 (維持不變) ===
-        // 老闆/Admin儀表板
+        // === 5. 儀表板與列表 (V20: 加入狀態判斷，防止重複監聽) ===
         function initOwnerDashboard() {
+            if(isOwnerInit) return; // 避免重複執行
+            isOwnerInit = true;
+
             db.collection('families').onSnapshot(snap => {
                 ownerFamiliesCache = [];
                 document.getElementById('ownerTotalFamilies').innerText = snap.size;
@@ -636,7 +679,7 @@
                 else { stagnantBoard.classList.add('hidden'); }
             });
 
-            // 人員管理列表
+            // V23 修正: 人員管理列表 (移除所有「設為程式管理者」按鈕)
             db.collection('users').where('role', '!=', 'owner').onSnapshot(snap => {
                  let html = '';
                  allStaffCache = []; directorsCache = [];
@@ -669,18 +712,16 @@
  
                      const transferBtn = !isDirector ? `<button onclick="openTransferModal('${doc.id}', '${u.name}')" class="px-3 py-1 text-xs rounded border bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold"><i class="fa-solid fa-right-left"></i> 移交</button>` : '';
 
-                     let adminBtn = '';
                      let roleBadge = isDirector ? '班主任' : '管理師';
                      let roleClass = 'text-gray-500';
                      
                      if (isAdmin) {
                          roleBadge = '程式管理者';
                          roleClass = 'text-adminPurple font-bold';
-                         adminBtn = `<button onclick="toggleAdmin('${doc.id}', false)" class="px-3 py-1 text-xs rounded border bg-gray-100 text-gray-600 hover:bg-gray-200 font-bold">移除管理者</button>`;
-                     } else {
-                         adminBtn = `<button onclick="toggleAdmin('${doc.id}', true)" class="px-3 py-1 text-xs rounded border bg-adminBg text-adminPurple hover:bg-purple-200 font-bold">設為程式管理者</button>`;
                      }
 
+                     // V23: 移除所有 toggleAdmin 按鈕
+                     
                      const directorBtn = isAdmin ? '' : `<button onclick="toggleRole('${doc.id}', '${u.role}')" class="px-3 py-1 text-xs rounded border ${isDirector ? 'bg-purple-50 text-purple-600' : 'bg-orange-50 text-orange-600'} font-bold">
                                      ${isDirector ? '降為管理師' : '升為班主任'}
                                  </button>`;
@@ -693,7 +734,6 @@
                                  <div class="text-xs ${roleClass}"><i class="fa-solid fa-id-badge"></i> ${roleBadge}</div>
                              </div>
                              <div class="flex gap-2 flex-wrap justify-end">
-                                 ${adminBtn}
                                  ${transferBtn}
                                  ${directorBtn}
                                  <button onclick="deleteUser('${doc.id}', '${u.name}')" class="px-3 py-1 text-xs rounded border bg-red-50 text-red-600 hover:bg-red-100 font-bold"><i class="fa-solid fa-trash"></i> 刪除</button>
@@ -848,15 +888,6 @@
             }
         }
 
-        async function toggleAdmin(uid, makeAdmin) {
-            const newRole = makeAdmin ? 'admin' : 'manager';
-            const msg = makeAdmin ? '確定要將此人設為「程式管理者」嗎？\n他將擁有與老闆相同的最高權限！' : '確定要移除此人的管理者權限嗎？';
-            if(confirm(msg)) {
-                await db.collection('users').doc(uid).update({ role: newRole });
-                alert('權限已更新。');
-            }
-        }
-
         async function deleteUser(uid, name) {
             if(confirm(`警告：確定要刪除「${name}」嗎？\n此操作會移除該員工登入權限。`)) {
                 await db.collection('users').doc(uid).delete();
@@ -900,8 +931,11 @@
             showLoading(false);
         }
 
-        // 班主任儀表板 (維持不變)
+        // 班主任儀表板 (加入防重複執行)
         async function initDirectorDashboard() {
+            if(isDirectorInit) return;
+            isDirectorInit = true;
+
             db.collection('families').where('managerId', '==', currentUser.uid).onSnapshot(snap => {
                 directorPersonalCache = [];
                 snap.forEach(doc => directorPersonalCache.push({id: doc.id, ...doc.data()}));
@@ -974,7 +1008,7 @@
             });
         }
 
-        // 班主任個人列表渲染
+        // 班主任個人列表渲染 (維持不變)
         function renderDirectorMyFamilyList() {
             const container = document.getElementById('directorMyFamilyList');
             const search = document.getElementById('directorMySearch').value.toLowerCase();
@@ -1003,8 +1037,11 @@
             container.innerHTML = html;
         }
 
-        // 管理師儀表板
+        // 管理師儀表板 (加入防重複執行)
         function initManagerDashboard() {
+            if(isManagerInit) return;
+            isManagerInit = true;
+
             const list = document.getElementById('managerFamilyList');
             const exSection = document.getElementById('managerExcellentSection');
             const exList = document.getElementById('managerExcellentList');
