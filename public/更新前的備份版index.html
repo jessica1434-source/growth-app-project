@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>兒童生長管理系統 </title>
+    <title>兒童生長管理系統 (終極修正版V25)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -1092,7 +1092,7 @@
             });
         }
 
-        // === Modal 與 資料操作 (共用) (維持不變) ===
+        // === Modal 與 資料操作 (V25: 更新 addKidField 和 saveFamily 以包含新欄位) ===
         function openFamilyModal(id = null, initialTab = 'basic') {
             document.getElementById('familyForm').reset();
             document.getElementById('familyId').value = id || '';
@@ -1116,7 +1116,7 @@
                     document.getElementById('parentName').value = d.parentName;
                     document.getElementById('nationality').value = d.nationality;
                     document.getElementById('joinDate').value = d.joinDate || '';
-                    document.getElementById('deadlineDate').value = d.deadlineDate || ''; // V24: 載入截止日期
+                    document.getElementById('deadlineDate').value = d.deadlineDate || ''; 
                     document.getElementById('isRenewal').checked = d.isRenewal || false;
                     document.getElementById('logDate').value = new Date().toISOString().split('T')[0];
                     if(d.riskLevel) document.querySelector(`input[name="risk"][value="${d.riskLevel}"]`).checked = true;
@@ -1166,12 +1166,19 @@
             const container = document.getElementById('kidsContainer');
             const delBtn = isModalReadOnly ? '' : `<div class="md:col-span-1 text-right"><button type="button" onclick="toggleKidDeletion(this)" class="text-red-500"><i class="fa-solid fa-trash"></i></button></div>`;
             
-            const html = `<div class="grid grid-cols-1 md:grid-cols-5 gap-2 bg-white p-2 rounded border border-gray-200 mb-2 kid-entry items-end">
-                <div class="md:col-span-1"><label class="text-[10px] text-gray-400">姓名</label><input type="text" class="kid-name w-full border p-1 text-sm rounded" value="${data ? data.name : ''}" required ${isModalReadOnly?'disabled':''}></div>
-                <div class="md:col-span-1"><label class="text-[10px] text-gray-400">生日</label><input type="date" class="kid-dob w-full border p-1 text-sm rounded" value="${data ? data.dob : ''}" ${isModalReadOnly?'disabled':''} max="9999-12-31"></div>
-                <div class="md:col-span-1"><label class="text-[10px] text-gray-400">初始身高</label><input type="number" step="0.1" class="kid-h w-full border p-1 text-sm rounded" value="${data ? data.initialHeight : ''}" placeholder="cm" ${isModalReadOnly?'disabled':''}></div>
-                <div class="md:col-span-1"><label class="text-[10px] text-gray-400">初始體重</label><input type="number" step="0.1" class="kid-w w-full border p-1 text-sm rounded" value="${data ? data.initialWeight : ''}" placeholder="kg" ${isModalReadOnly?'disabled':''}></div>
-                ${delBtn}
+            // V25 修改：將孩童資料區塊改為更有層次的卡片，並新增「初始狀況說明」欄位
+            const html = `<div class="bg-white p-2 rounded border border-gray-200 mb-2 kid-entry">
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
+                    <div class="md:col-span-1"><label class="text-[10px] text-gray-400">姓名</label><input type="text" class="kid-name w-full border p-1 text-sm rounded" value="${data ? data.name : ''}" required ${isModalReadOnly?'disabled':''}></div>
+                    <div class="md:col-span-1"><label class="text-[10px] text-gray-400">生日</label><input type="date" class="kid-dob w-full border p-1 text-sm rounded" value="${data ? data.dob : ''}" ${isModalReadOnly?'disabled':''} max="9999-12-31"></div>
+                    <div class="md:col-span-1"><label class="text-[10px] text-gray-400">初始身高</label><input type="number" step="0.1" class="kid-h w-full border p-1 text-sm rounded" value="${data ? data.initialHeight : ''}" placeholder="cm" ${isModalReadOnly?'disabled':''}></div>
+                    <div class="md:col-span-1"><label class="text-[10px] text-gray-400">初始體重</label><input type="number" step="0.1" class="kid-w w-full border p-1 text-sm rounded" value="${data ? data.initialWeight : ''}" placeholder="kg" ${isModalReadOnly?'disabled':''}></div>
+                    ${delBtn}
+                </div>
+                <div class="mt-2">
+                    <label class="text-[10px] text-gray-400">初始狀況說明 (家長提出)</label>
+                    <input type="text" class="kid-status w-full border p-1 text-sm rounded" value="${data ? data.initialStatus || '' : ''}" placeholder="例如：食慾不佳、睡眠品質差、過敏..." ${isModalReadOnly?'disabled':''}>
+                </div>
             </div>`;
             container.insertAdjacentHTML('beforeend', html);
         }
@@ -1247,6 +1254,7 @@
                     name, dob, 
                     initialHeight: div.querySelector('.kid-h').value,
                     initialWeight: div.querySelector('.kid-w').value,
+                    initialStatus: div.querySelector('.kid-status').value, // V25: 儲存初始狀況說明
                     logs: existingLogs
                 });
             });
@@ -1255,7 +1263,7 @@
                 parentName: document.getElementById('parentName').value,
                 nationality: document.getElementById('nationality').value,
                 joinDate: document.getElementById('joinDate').value,
-                deadlineDate: document.getElementById('deadlineDate').value, // V24: 儲存截止日期
+                deadlineDate: document.getElementById('deadlineDate').value, 
                 isRenewal: document.getElementById('isRenewal').checked,
                 kids: kidsData,
                 updatedAt: new Date()
