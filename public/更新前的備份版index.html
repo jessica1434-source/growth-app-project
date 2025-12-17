@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>兒童生長管理系統 (終極修正版V25)</title>
+    <title>兒童生長管理系統 (終極修正版V27 - 骨齡更新版)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -904,7 +904,7 @@
             document.getElementById('transferModalTitle').innerText = `移交 ${managerName} 的所有家庭`;
             const select = document.getElementById('targetManagerSelect');
             select.innerHTML = '<option value="">請選擇接收者</option>';
-            allStaffCache.forEach(s => {
+            allStaffStaffCache.forEach(s => {
                 if(s.id !== managerId) { 
                     select.innerHTML += `<option value="${s.id}">${s.name}</option>`;
                 }
@@ -1092,7 +1092,7 @@
             });
         }
 
-        // === Modal 與 資料操作 (V25: 更新 addKidField 和 saveFamily 以包含新欄位) ===
+        // === Modal 與 資料操作 (V26: 骨齡欄位回歸) ===
         function openFamilyModal(id = null, initialTab = 'basic') {
             document.getElementById('familyForm').reset();
             document.getElementById('familyId').value = id || '';
@@ -1166,13 +1166,14 @@
             const container = document.getElementById('kidsContainer');
             const delBtn = isModalReadOnly ? '' : `<div class="md:col-span-1 text-right"><button type="button" onclick="toggleKidDeletion(this)" class="text-red-500"><i class="fa-solid fa-trash"></i></button></div>`;
             
-            // V25 修改：將孩童資料區塊改為更有層次的卡片，並新增「初始狀況說明」欄位
+            // V26 修改：Grid 改為 6 欄，新增骨齡欄位
             const html = `<div class="bg-white p-2 rounded border border-gray-200 mb-2 kid-entry">
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
+                <div class="grid grid-cols-2 md:grid-cols-6 gap-2 items-end">
                     <div class="md:col-span-1"><label class="text-[10px] text-gray-400">姓名</label><input type="text" class="kid-name w-full border p-1 text-sm rounded" value="${data ? data.name : ''}" required ${isModalReadOnly?'disabled':''}></div>
                     <div class="md:col-span-1"><label class="text-[10px] text-gray-400">生日</label><input type="date" class="kid-dob w-full border p-1 text-sm rounded" value="${data ? data.dob : ''}" ${isModalReadOnly?'disabled':''} max="9999-12-31"></div>
                     <div class="md:col-span-1"><label class="text-[10px] text-gray-400">初始身高</label><input type="number" step="0.1" class="kid-h w-full border p-1 text-sm rounded" value="${data ? data.initialHeight : ''}" placeholder="cm" ${isModalReadOnly?'disabled':''}></div>
                     <div class="md:col-span-1"><label class="text-[10px] text-gray-400">初始體重</label><input type="number" step="0.1" class="kid-w w-full border p-1 text-sm rounded" value="${data ? data.initialWeight : ''}" placeholder="kg" ${isModalReadOnly?'disabled':''}></div>
+                    <div class="md:col-span-1"><label class="text-[10px] text-gray-400">骨齡 (歲)</label><input type="number" step="0.1" class="kid-bone w-full border p-1 text-sm rounded" value="${data ? data.boneAge : ''}" placeholder="歲" ${isModalReadOnly?'disabled':''}></div>
                     ${delBtn}
                 </div>
                 <div class="mt-2">
@@ -1254,7 +1255,8 @@
                     name, dob, 
                     initialHeight: div.querySelector('.kid-h').value,
                     initialWeight: div.querySelector('.kid-w').value,
-                    initialStatus: div.querySelector('.kid-status').value, // V25: 儲存初始狀況說明
+                    boneAge: div.querySelector('.kid-bone').value, // V26: 儲存骨齡
+                    initialStatus: div.querySelector('.kid-status').value, 
                     logs: existingLogs
                 });
             });
