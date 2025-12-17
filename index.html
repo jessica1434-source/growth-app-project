@@ -1092,7 +1092,7 @@
             });
         }
 
-        // === Modal 與 資料操作 (V25: 更新 addKidField 和 saveFamily 以包含新欄位, V26: 骨齡回歸, V28: 紀錄編輯) ===
+        // === Modal 與 資料操作 (V25: 更新 addKidField 和 saveFamily 以包含新欄位, V26: 骨齡回歸, V28: 紀錄編輯, V29: 修復跳頁) ===
         function openFamilyModal(id = null, initialTab = 'basic') {
             document.getElementById('familyForm').reset();
             document.getElementById('familyId').value = id || '';
@@ -1218,7 +1218,7 @@
                 
                 const sorted = [...logs].sort((a,b) => (a.date||'').localeCompare(b.date||''));
                 
-                // V13+V28 修改：新增編輯按鈕
+                // V29 修改：按鈕加上 type="button"
                 let html = '<table class="w-full text-xs text-left"><thead class="bg-gray-50"><tr><th class="p-1">日期</th><th class="p-1">身高</th><th class="p-1">體重</th><th class="p-1">茶包</th><th class="p-1">執行(推/穴/運)</th><th class="p-1">忌口</th><th class="p-1">狀況</th><th class="p-1 text-center">操作</th></tr></thead><tbody>';
                 
                 for(let i = sorted.length - 1; i >= 0; i--) {
@@ -1229,8 +1229,8 @@
                     const exec = `${l.massage||0}/${l.acupoint||0}/${l.exercise||0}`;
                     const origIdx = logs.indexOf(l);
                     
-                    const editBtn = isModalReadOnly ? '' : `<button onclick="editLog(${origIdx})" class="text-yellow-600 hover:text-yellow-800 mr-2" title="編輯此紀錄"><i class="fa-solid fa-pen"></i></button>`;
-                    const delBtn = isModalReadOnly ? '-' : `<button onclick="deleteLog(${origIdx})" class="text-red-500 hover:text-red-700" title="刪除此紀錄"><i class="fa-solid fa-trash"></i></button>`;
+                    const editBtn = isModalReadOnly ? '' : `<button type="button" onclick="editLog(${origIdx})" class="text-yellow-600 hover:text-yellow-800 mr-2" title="編輯此紀錄"><i class="fa-solid fa-pen"></i></button>`;
+                    const delBtn = isModalReadOnly ? '-' : `<button type="button" onclick="deleteLog(${origIdx})" class="text-red-500 hover:text-red-700" title="刪除此紀錄"><i class="fa-solid fa-trash"></i></button>`;
                     
                     html += `<tr class="border-b hover:bg-gray-50"><td class="p-1">${l.date}</td><td class="p-1 font-bold">${l.height} <span class="${hColor} text-[10px]">(${diffH>0?'+':''}${diffH})</span></td><td class="p-1">${l.weight}</td><td class="p-1">${l.teaBags||'-'}</td><td class="p-1">${exec}</td><td class="p-1">${l.diet||'-'}</td><td class="p-1 max-w-[100px] truncate" title="${l.statusReport||''}">${l.statusReport||'-'}</td><td class="p-1 text-center">${editBtn}${delBtn}</td></tr>`;
                 }
