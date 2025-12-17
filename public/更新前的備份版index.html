@@ -293,7 +293,10 @@
                             </div>
 
                             <div><label class="block text-sm font-bold text-gray-700 mb-1">加入日期</label><input type="date" id="joinDate" class="w-full border p-3 rounded-lg" max="9999-12-31"></div>
-                            <div class="flex items-center pt-6"><input type="checkbox" id="isRenewal" class="w-5 h-5 text-primary"><label for="isRenewal" class="ml-2 font-bold text-gray-700">是否為續約戶</label></div>
+                            
+                            <div><label class="block text-sm font-bold text-gray-700 mb-1">管理截止日期</label><input type="date" id="deadlineDate" class="w-full border p-3 rounded-lg" max="9999-12-31"></div>
+
+                            <div class="flex items-center pt-2"><input type="checkbox" id="isRenewal" class="w-5 h-5 text-primary"><label for="isRenewal" class="ml-2 font-bold text-gray-700">是否為續約戶</label></div>
                         </div>
 
                         <div class="bg-orange-50 p-4 rounded-lg border border-orange-100">
@@ -1113,6 +1116,7 @@
                     document.getElementById('parentName').value = d.parentName;
                     document.getElementById('nationality').value = d.nationality;
                     document.getElementById('joinDate').value = d.joinDate || '';
+                    document.getElementById('deadlineDate').value = d.deadlineDate || ''; // V24: 載入截止日期
                     document.getElementById('isRenewal').checked = d.isRenewal || false;
                     document.getElementById('logDate').value = new Date().toISOString().split('T')[0];
                     if(d.riskLevel) document.querySelector(`input[name="risk"][value="${d.riskLevel}"]`).checked = true;
@@ -1251,6 +1255,7 @@
                 parentName: document.getElementById('parentName').value,
                 nationality: document.getElementById('nationality').value,
                 joinDate: document.getElementById('joinDate').value,
+                deadlineDate: document.getElementById('deadlineDate').value, // V24: 儲存截止日期
                 isRenewal: document.getElementById('isRenewal').checked,
                 kids: kidsData,
                 updatedAt: new Date()
